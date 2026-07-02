@@ -14,7 +14,6 @@ const LEVEL_DESC: Record<string, string> = {
   B2: "Upper-Int.", C1: "Advanced", C2: "Mastery",
 };
 
-// English is always the primary language — locked, not selectable
 const ENGLISH = SUPPORTED_LANGUAGES.find((l) => l.code === "en")!;
 const SECONDARY_LANGUAGES = SUPPORTED_LANGUAGES.filter((l) => l.code !== "en");
 
@@ -35,11 +34,10 @@ export default function SettingsPage() {
   const [testState, setTestState] = useState<TestState>("idle");
   const [testError, setTestError] = useState("");
 
-  // Language — derive the current secondary code from the store
-  const currentSecondary = translationLanguages.find((l) => l.code !== "en") ?? translationLanguages[0];
-  const [secondaryCode, setSecondaryCode] = useState<string>(
-    currentSecondary?.code !== "en" ? currentSecondary?.code ?? "fa" : "fa"
-  );
+  // Language state
+  const currentSecondary = translationLanguages.find((l) => l.code !== "en");
+  const [englishOn, setEnglishOn] = useState<boolean>(translationLanguages.some((l) => l.code === "en"));
+  const [secondaryCode, setSecondaryCode] = useState<string>(currentSecondary?.code ?? "");
   const [langSaved, setLangSaved] = useState(false);
 
   // Usage stats
@@ -123,10 +121,14 @@ export default function SettingsPage() {
   };
 
   const handleApplyLangs = () => {
-    const secondLang = SUPPORTED_LANGUAGES.find((l) => l.code === secondaryCode) as Language;
-    if (!secondLang) return;
-    // Always store [English, secondLang]
-    setTranslationLanguages([ENGLISH as Language, secondLang]);
+    const langs: Language[] = [];
+    if (englishOn) langs.push(ENGLISH as Language);
+    if (secondaryCode) {
+      const secondLang = SUPPORTED_LANGUAGES.find((l) => l.code === secondaryCode) as Language;
+      if (secondLang) langs.push(secondLang);
+    }
+    if (langs.length === 0) return;
+    setTranslationLanguages(langs);
     setLangSaved(true);
     setTimeout(() => setLangSaved(false), 2500);
   };
@@ -353,7 +355,7 @@ export default function SettingsPage() {
             <div>
               <h2 className="font-semibold text-slate-800 dark:text-slate-100">Your Language</h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                All AI explanations will be shown in English + your language.
+                AI explanations will be shown in your selected language(s).
               </p>
             </div>
           </div>
@@ -368,29 +370,67 @@ export default function SettingsPage() {
           </button>
         </div>
 
-        {/* Primary language — locked */}
+        {/* English toggle */}
         <div>
-          <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">
-            Primary (always shown)
-          </p>
-          <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-900/20">
-            <Lock size={13} className="text-brand-400 dark:text-brand-500 shrink-0" />
-            <div>
-              <p className="text-sm font-semibold text-brand-700 dark:text-brand-300">English</p>
-              <p className="text-xs text-brand-500 dark:text-brand-400">English</p>
-            </div>
-            <span className="ml-auto text-xs bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 px-2 py-0.5 rounded-full font-medium">
-              Always selected
+          <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">English</p>
+          <button
+            onClick={() => {
+              if (englishOn && !secondaryCode) return; // last one — can't turn off
+              setEnglishOn((v) => !v);
+            }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all ${
+              englishOn
+                ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20 shadow-sm"
+                : "border-slate-200 dark:border-slate-700 hover:border-slate-300 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/50"
+            } ${englishOn && !secondaryCode ? "cursor-not-allowed" : ""}`}
+          >
+            <span className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
+              englishOn ? "border-brand-500 bg-brand-500" : "border-slate-300 dark:border-slate-600"
+            }`}>
+              {englishOn && <Check size={10} className="text-white" />}
             </span>
-          </div>
+            <div>
+              <p className={`text-sm font-semibold ${englishOn ? "text-brand-700 dark:text-brand-300" : "text-slate-700 dark:text-slate-200"}`}>English</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500">English</p>
+            </div>
+            {englishOn && !secondaryCode && (
+              <span className="ml-auto text-[10px] text-slate-400 dark:text-slate-500 italic">select another language to disable</span>
+            )}
+          </button>
         </div>
 
-        {/* Secondary language — user picks one */}
+        {/* Secondary language — user picks one or none */}
         <div>
           <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">
-            Your language <span className="text-slate-300 dark:text-slate-600 font-normal normal-case">— select one</span>
+            Second language <span className="text-slate-300 dark:text-slate-600 font-normal normal-case">— optional</span>
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {/* None option */}
+            <button
+              onClick={() => { if (!englishOn) return; setSecondaryCode(""); }}
+              disabled={!englishOn}
+              className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-left transition-all ${
+                secondaryCode === "" && englishOn
+                  ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20 shadow-sm"
+                  : !englishOn
+                    ? "border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/30 opacity-40 cursor-not-allowed"
+                    : "border-slate-200 dark:border-slate-700 hover:border-slate-300 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/50"
+              }`}
+            >
+              <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                secondaryCode === "" && englishOn ? "border-brand-500" : "border-slate-300 dark:border-slate-600"
+              }`}>
+                {secondaryCode === "" && englishOn && <span className="w-2 h-2 rounded-full bg-brand-500" />}
+              </span>
+              <div className="min-w-0">
+                <p className={`text-xs font-semibold leading-tight ${secondaryCode === "" && englishOn ? "text-brand-700 dark:text-brand-300" : "text-slate-700 dark:text-slate-200"}`}>
+                  None
+                </p>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-tight truncate mt-0.5">
+                  No second language
+                </p>
+              </div>
+            </button>
             {SECONDARY_LANGUAGES.map((lang) => {
               const selected = secondaryCode === lang.code;
               return (
@@ -424,18 +464,25 @@ export default function SettingsPage() {
         </div>
 
         {/* Preview */}
-        {secondLangObj && (
-          <div className="px-4 py-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400">
-            Explanations will be shown in{" "}
-            <span className="font-semibold text-slate-700 dark:text-slate-200">English</span>
-            {" "}+{" "}
-            <span className="font-semibold text-slate-700 dark:text-slate-200"
-              dir={secondLangObj.rtl ? "rtl" : "ltr"}
-            >
-              {secondLangObj.nativeName} ({secondLangObj.name})
-            </span>
-          </div>
-        )}
+        <div className="px-4 py-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400">
+          {englishOn && !secondaryCode && (
+            <>Explanations will be shown in <span className="font-semibold text-slate-700 dark:text-slate-200">English</span> only.</>
+          )}
+          {!englishOn && secondaryCode && secondLangObj && (
+            <>Explanations will be shown in{" "}
+              <span className="font-semibold text-slate-700 dark:text-slate-200" dir={secondLangObj.rtl ? "rtl" : "ltr"}>
+                {secondLangObj.nativeName} ({secondLangObj.name})
+              </span>{" "}only.</>
+          )}
+          {englishOn && secondaryCode && secondLangObj && (
+            <>Explanations will be shown in{" "}
+              <span className="font-semibold text-slate-700 dark:text-slate-200">English</span>
+              {" "}+{" "}
+              <span className="font-semibold text-slate-700 dark:text-slate-200" dir={secondLangObj.rtl ? "rtl" : "ltr"}>
+                {secondLangObj.nativeName} ({secondLangObj.name})
+              </span>.</>
+          )}
+        </div>
       </section>
 
       {/* ── German Level ── */}

@@ -60,7 +60,7 @@ Upload any German PDF — text-based or scanned. Highlight a **word** to get ins
 
 - Gemini Vision OCR for scanned pages
 - Word analysis: gender, case, conjugation, CEFR level, example sentences
-- Translation in English + your language
+- Translation in your selected language(s)
 - Grammar rule detection from selected text
 - In-page annotations and highlights
 - AI tutor chat with Gemini neural voice
@@ -87,7 +87,7 @@ A structured **A1 → C2 grammar roadmap** with 15 pre-built rules. Each rule ha
 - Level-locked progression
 - AI tutor chat per grammar rule
 - Grammar notes captured in the reader link back here
-- Explanations in English + your language
+- Explanations in your selected language(s)
 
 </td>
 <td width="50%">
@@ -99,7 +99,7 @@ Practice real German in 10 role-play scenarios — grocery store, restaurant, ba
 - Gemini neural TTS voice output with optional auto-play
 - Gentle grammar correction after each message
 - Vocabulary highlights from the AI response
-- Explanations in your chosen language
+- Explanations in your selected language(s)
 
 </td>
 </tr>
@@ -134,7 +134,7 @@ A complete German case reference covering all articles, adjective endings, and p
 
 ## 🌍 16 Supported Languages
 
-All AI explanations are delivered in **English** (always) plus **one language of your choice**, configurable in Settings:
+AI explanations are delivered in your chosen language(s) — pick **English only**, a **second language only**, or **both**. Configurable in Settings:
 
 <div align="center">
 

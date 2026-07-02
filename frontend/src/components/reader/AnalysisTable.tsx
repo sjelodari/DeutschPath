@@ -178,8 +178,10 @@ export function AnalysisTable({ results, onSaveVocab, onDelete }: Props) {
               </div>
             )}
             {item.note && (
-              <p className="text-xs text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 px-2.5 py-1.5 rounded-lg">
-                <span className="font-semibold">Note: </span>
+              <p
+                className="text-xs text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 px-2.5 py-1.5 rounded-lg"
+                dir={langs[0]?.rtl ? "rtl" : "ltr"}
+              >
                 {item.note}
               </p>
             )}

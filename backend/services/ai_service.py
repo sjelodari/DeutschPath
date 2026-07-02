@@ -373,6 +373,8 @@ async def batch_analyze_words(
             {"code": "fa", "name": "Persian"},
         ]
 
+    note_lang = translation_languages[0]["name"]
+
     trans_fields = "\n".join(
         f'      "{l["code"]}": "{l["name"]} translation"'
         for l in translation_languages
@@ -404,7 +406,7 @@ Return ONLY a JSON array with exactly {len(words)} objects in the same order:
     "example_translations": {{
 {ex_fields}
     }},
-    "note": "one important note: plural/past-participle/required-preposition, etc. — empty string if none",
+    "note": "one important note in {note_lang}: plural/past-participle/required-preposition, etc. — empty string if none",
     "extra_info": {{
       "is_separable": true or false (verbs only — true if separable prefix like auf-, an-, ab-, mit-, etc.; null for non-verbs),
       "separable_prefix": "the prefix e.g. auf, an, ab (null if not separable or not a verb)"

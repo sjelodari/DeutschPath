@@ -178,7 +178,7 @@ export function AnnotationLayer({
               onBlur={handleBlur}
               placeholder="Type note…"
               rows={2}
-              className="w-44 px-2 py-1.5 bg-transparent resize-none focus:outline-none"
+              className="w-44 px-2 py-0 bg-transparent resize-none focus:outline-none"
               style={{
                 fontSize: `${pendingFontSize}px`,
                 color: pendingColor,

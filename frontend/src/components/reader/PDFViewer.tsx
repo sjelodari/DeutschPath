@@ -305,6 +305,27 @@ export function PDFViewer({
     try { await deleteAnnotation(id); } catch { /* ignore */ }
   };
 
+  const handleUpdateAnnotation = async (id: string, content: string) => {
+    if (!bookId) return;
+    const ann = annotations.find((a) => a.id === id);
+    if (!ann) return;
+    setAnnotations((prev) => prev.map((a) => a.id === id ? { ...a, content } : a));
+    try {
+      await deleteAnnotation(id);
+      const saved = await createAnnotation({
+        book_id: bookId,
+        page_num: activePage,
+        x: ann.x,
+        y: ann.y,
+        content,
+        color: ann.color,
+        mark_type: "text",
+        font_size: ann.font_size,
+      });
+      setAnnotations((prev) => prev.map((a) => a.id === id ? saved : a));
+    } catch { /* keep optimistic update */ }
+  };
+
   // ── PDF save (bake marks → overwrite file on server) ──────────────────────
 
   const handleSavePDF = async () => {
@@ -686,6 +707,7 @@ export function PDFViewer({
             onSave={handleSaveAnnotation}
             onCancel={() => setPendingAnnotation(null)}
             onDelete={handleDeleteAnnotation}
+            onUpdate={handleUpdateAnnotation}
             pendingColor={markColor}
             pendingFontSize={markFontSize}
           />

@@ -265,8 +265,8 @@ When you have finished using the platform and want to exit, do NOT simply close 
 ║  │  Writing · Profile  │    ║  (text · vision · chat)    ║       ║
 ║  │  Annotations        │    ║                            ║       ║
 ║  └─────────────────────┘    ║  gemini-2.5-flash-tts      ║       ║
-║                              ║  (neural voice output)    ║       ║
-║                              ╚═══════════════════════════╝       ║
+║                             ║  (neural voice output)     ║       ║
+║                             ╚════════════════════════════╝       ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 

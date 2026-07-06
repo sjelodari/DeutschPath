@@ -29,11 +29,10 @@
 <br/>
 
 <!-- Replace VIDEO_ID with your YouTube video ID once uploaded -->
-<a href="https://www.youtube.com/watch?v=VIDEO_ID">
+<a href="[https://www.youtube.com/watch?v=VIDEO_ID](https://youtu.be/iMbs5omO_aU)">
   <img src="https://img.youtube.com/vi/VIDEO_ID/maxresdefault.jpg" alt="Watch the demo on YouTube" width="700" />
 </a>
 
-<sub>▶ Demo video coming soon</sub>
 
 </div>
 
@@ -166,7 +165,7 @@ No installation wizard. Just double-click.
 **🪟 Windows**
 
 1. **First time:** double-click **`DeutschPath.bat`** — automatically installs Python 3 and Node.js 20 LTS if missing, then launches the app
-2. **After setup:** use **`DeutschPath.lnk`** (created on first run, carries the app icon) or `DeutschPath.vbs`
+2. **After setup:** use  `DeutschPath.vbs` and later it generates shortcuts which you can add to your desktop
 
 </td>
 </tr>
@@ -182,7 +181,7 @@ The launcher:
 
 ## 🔑 Getting Your Gemini API Key
 
-DeutschPath uses Google's Gemini API. The free tier covers regular personal use.
+DeutschPath uses Google's Gemini API. The free tier covers regular personal use. 
 
 1. Go to **[aistudio.google.com](https://aistudio.google.com)** — sign in with any Google account
 2. Click **Get API key → Create API key**
@@ -192,6 +191,9 @@ DeutschPath uses Google's Gemini API. The free tier covers regular personal use.
 > **Free tier limits (as of June 2026):** 10 requests/min · 250,000 tokens/min · 250 requests/day for Gemini 2.5 Flash text. The TTS model (`gemini-2.5-flash-preview-tts`) has **no free tier** — voice features (auto-play in scenarios and the reader) are billed at paid rates. Keep auto-play off if you want to stay on the free tier.
 
 ---
+
+### Important Reminder!
+When you have finished using the platform and want to exit, do NOT simply close the tab. First, shut down the platform by clicking the button in the top right corner, and only then close the tab.
 
 ## 🛠 Technologies & Tools
 
@@ -225,25 +227,25 @@ DeutschPath uses Google's Gemini API. The free tier covers regular personal use.
 ╔══════════════════════════════════════════════════════════════════╗
 ║                        USER'S MACHINE                            ║
 ║                                                                  ║
-║  ┌──────────────────────────────────────────────────────────┐   ║
+║  ┌───────────────────────────────────────────────────────────┐   ║
 ║  │              Browser  (localhost:3000)                    │   ║
-║  │           Next.js 15  ·  React 19  ·  TypeScript         │   ║
+║  │           Next.js 15  ·  React 19  ·  TypeScript          │   ║
 ║  │                                                           │   ║
-║  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐   │   ║
-║  │  │  Reader  │ │ Vocab /  │ │ Grammar  │ │ Writing  │   │   ║
-║  │  │  + Chat  │ │  Flashcd │ │ Roadmap  │ │ Practice │   │   ║
-║  │  └──────────┘ └──────────┘ └──────────┘ └──────────┘   │   ║
-║  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐   │   ║
-║  │  │Scenarios │ │  Cases   │ │Dashboard │ │ Settings │   │   ║
-║  │  │+ Voice   │ │ & Drills │ │& Progress│ │& API Key │   │   ║
-║  │  └──────────┘ └──────────┘ └──────────┘ └──────────┘   │   ║
-║  └────────────────────────┬─────────────────────────────────┘   ║
+║  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐      │   ║
+║  │  │  Reader  │ │ Vocab /  │ │ Grammar  │ │ Writing  │      │   ║
+║  │  │  + Chat  │ │  Flashcd │ │ Roadmap  │ │ Practice │      │   ║
+║  │  └──────────┘ └──────────┘ └──────────┘ └──────────┘      │   ║
+║  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐      │   ║
+║  │  │Scenarios │ │  Cases   │ │Dashboard │ │ Settings │      │   ║
+║  │  │+ Voice   │ │ & Drills │ │& Progress│ │& API Key │      │   ║
+║  │  └──────────┘ └──────────┘ └──────────┘ └──────────┘      │   ║
+║  └────────────────────────┬──────────────────────────────────┘   ║
 ║                           │  HTTP/JSON  (fetch)                  ║
-║  ┌────────────────────────▼─────────────────────────────────┐   ║
+║  ┌────────────────────────▼──────────────────────────────────┐   ║
 ║  │              FastAPI  (localhost:8000)                    │   ║
 ║  │                                                           │   ║
 ║  │  Routers                    Services                      │   ║
-║  │  ├─ /books   (reader,OCR)   ├─ ai_service.py             │   ║
+║  │  ├─ /books   (reader,OCR)   ├─ ai_service.py              │   ║
 ║  │  ├─ /words   (vocab, SM-2)  │    └─ all Gemini calls      │   ║
 ║  │  ├─ /grammar (roadmap)      ├─ pdf_service.py             │   ║
 ║  │  ├─ /scenarios (chat)       │    └─ pdfplumber + OCR      │   ║
@@ -251,16 +253,16 @@ DeutschPath uses Google's Gemini API. The free tier covers regular personal use.
 ║  │  ├─ /tts      (audio out)   └─ usage_tracker.py           │   ║
 ║  │  ├─ /settings (key, stats)       └─ usage.json            │   ║
 ║  │  └─ /users    (profile)                                   │   ║
-║  └──────────┬─────────────────────────┬────────────────────┘   ║
+║  └──────────┬─────────────────────────┬──────────────────────┘   ║
 ║             │                         │                          ║
 ║  ┌──────────▼──────────┐              │  HTTPS                   ║
 ║  │   SQLite Database   │              │                          ║
-║  │   deutschpath.db    │    ╔─────────▼─────────────────╗       ║
+║  │   deutschpath.db    │    ╔─────────▼──────────────────╗       ║
 ║  │                     │    ║   Google Gemini API        ║       ║
-║  │  Books · Words      │    ║                           ║       ║
+║  │  Books · Words      │    ║                            ║       ║
 ║  │  Grammar · Sessions │    ║  gemini-2.5-flash          ║       ║
-║  │  Writing · Profile  │    ║  (text · vision · chat)   ║       ║
-║  │  Annotations        │    ║                           ║       ║
+║  │  Writing · Profile  │    ║  (text · vision · chat)    ║       ║
+║  │  Annotations        │    ║                            ║       ║
 ║  └─────────────────────┘    ║  gemini-2.5-flash-tts      ║       ║
 ║                              ║  (neural voice output)    ║       ║
 ║                              ╚═══════════════════════════╝       ║
@@ -373,11 +375,6 @@ DeutschPath/
 ## 🤝 Contributing
 
 Contributions are welcome. For non-trivial changes, please **open an issue first** to discuss what you'd like to change — this avoids wasted effort if the direction doesn't fit the project.
-
-You can also reach out directly via the **Contact page** inside the app, or by email at **saber.jelodari@uni-bayreuth.de**.
-
-There is no automated test suite at present — the project is a single-user local app and relies on manual testing. A PR that adds one is very welcome.
-
 ---
 
 ## ☕ Support

@@ -29,11 +29,12 @@
 <br/>
 
 <!-- Replace VIDEO_ID with your YouTube video ID once uploaded -->
-<a href="[https://www.youtube.com/watch?v=VIDEO_ID](https://youtu.be/iMbs5omO_aU)">
-  <img src="https://img.youtube.com/vi/VIDEO_ID/maxresdefault.jpg" alt="Watch the demo on YouTube" width="700" />
+<a href="https://youtu.be/iMbs5omO_aU">
+  <img src="https://img.youtube.com/vi/iMbs5omO_aU/maxresdefault.jpg" width="700" />
 </a>
-
-
+<p align="center">
+  <img src="https://img.shields.io/badge/Watch-YouTube-red?logo=youtube&style=for-the-badge" />
+</p>
 </div>
 
 ---

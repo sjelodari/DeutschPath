@@ -29,8 +29,8 @@
 <br/>
 
 <!-- Replace VIDEO_ID with your YouTube video ID once uploaded -->
-<a href="https://youtu.be/iMbs5omO_aU">
-  <img src="https://img.youtube.com/vi/iMbs5omO_aU/maxresdefault.jpg" width="700" />
+<a href="https://youtu.be/jtBI_LWqzgg">
+  <img src="https://img.youtube.com/vi/jtBI_LWqzgg/maxresdefault.jpg" width="700" />
 </a>
 <p align="center">
   <img src="https://img.shields.io/badge/Watch-YouTube-red?logo=youtube&style=for-the-badge" />

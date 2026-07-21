@@ -387,7 +387,9 @@
         "en": "English",
         "fa": "Persian",
         "ar": "Arabic",
-        "hi": "Hindi"
+        "hi": "Hindi",
+        "tr": "Turkish",
+        "ur": "Urdu"
       },
       "note": "This only changes the app interface. The language of AI explanations is set separately below."
     },

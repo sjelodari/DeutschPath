@@ -112,7 +112,7 @@ function renderLines(text: string): React.ReactNode {
       const content = numMatch[2].trim();
       const rtl = isRtl(content);
       out.push(
-        <div key={key++} dir={rtl ? "rtl" : undefined} className="flex gap-2 items-start mt-0.5">
+        <div key={key++} dir={rtl ? "rtl" : "ltr"} className="flex gap-2 items-start mt-0.5">
           <span className="shrink-0 w-[18px] h-[18px] rounded-full bg-brand-100 dark:bg-brand-900/40 text-brand-600 dark:text-brand-400 text-[10px] font-bold flex items-center justify-center mt-0.5">
             {num}
           </span>
@@ -130,7 +130,7 @@ function renderLines(text: string): React.ReactNode {
       out.push(
         <div
           key={key++}
-          dir={rtl ? "rtl" : undefined}
+          dir={rtl ? "rtl" : "ltr"}
           style={nested ? { [rtl ? "paddingRight" : "paddingLeft"]: "1rem" } : undefined}
           className="flex gap-1.5 items-start"
         >
@@ -145,7 +145,7 @@ function renderLines(text: string): React.ReactNode {
 
     const rtl = isRtl(line.trim());
     out.push(
-      <p key={key++} dir={rtl ? "rtl" : undefined} className="text-slate-800 dark:text-slate-200 leading-relaxed">
+      <p key={key++} dir={rtl ? "rtl" : "ltr"} className="text-slate-800 dark:text-slate-200 leading-relaxed">
         {parseBold(line.trim())}
       </p>
     );

@@ -1,14 +1,15 @@
 """
-i18n catalog regression tests for DeutschPath.
+Multilingual-catalog regression tests for DeutschPath.
 
-Run:  python3 validate_i18n.py
+Run:  python3 multilingual-support/validate_languages.py
 
 These tests auto-discover every frontend/src/messages/<code>.json file
 except en.json (the source of truth) and validate each one against it.
 Dropping a new frontend/src/messages/<code>.json in (e.g. tr.json for
 Turkish) gets it covered by every check below on the next run — nothing
-else to wire up. See I18N_TRANSLATION_PROMPT.md for the language-addition
-workflow this is meant to gate before a new catalog ships.
+else to wire up. See adding-a-language.md for the language-addition
+workflow this is meant to gate before a new catalog ships (add_language.py
+runs this automatically as its last step).
 
 What's checked, and why (each bullet is a real bug this project hit once):
   - key parity            -> a catalog missing/adding keys vs en.json
@@ -32,7 +33,8 @@ import os
 import re
 import unittest
 
-MESSAGES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend/src/messages")
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MESSAGES_DIR = os.path.join(REPO_ROOT, "frontend/src/messages")
 EN_PATH = os.path.join(MESSAGES_DIR, "en.json")
 
 # CLDR plural categories per locale. A locale not listed here still gets the
@@ -42,9 +44,11 @@ CLDR_PLURAL_CATEGORIES = {
     "fa": {"one", "other"},
     "hi": {"one", "other"},
     "ar": {"zero", "one", "two", "few", "many", "other"},
+    "tr": {"other"},
+    "ur": {"one", "other"},
 }
 
-# A representative sample of keys documented in I18N_HANDOVER.md #7 as
+# A representative sample of keys documented in README.md #7 as
 # deliberately German in every locale (immersion design). Not exhaustive —
 # add to this list if more such keys are introduced.
 SACRED_GERMAN_KEYS = [
@@ -183,7 +187,7 @@ class CatalogTests(unittest.TestCase):
 
     def test_german_sacred_strings_unchanged(self):
         """A handful of keys are deliberately German in every locale (immersion
-        design, see I18N_HANDOVER.md #7). A translator (human or LLM) "fixing"
+        design, see README.md #7). A translator (human or LLM) "fixing"
         one of these is the single most likely accidental-translation mistake."""
         present = [k for k in SACRED_GERMAN_KEYS if k in self.en]
         self.assertTrue(present, "None of SACRED_GERMAN_KEYS exist in en.json anymore — update the list in this file")

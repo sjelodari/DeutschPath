@@ -1,23 +1,26 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { useAppStore } from "@/src/lib/store";
 import { SUPPORTED_LANGUAGES } from "@/src/lib/languages";
 import type { Language } from "@/src/lib/languages";
+import { UI_LOCALES, UI_LOCALE_LABELS, type UiLocale } from "@/src/i18n/config";
+import { applyUiLocaleCookie } from "@/src/lib/locale";
 import { getSettings, saveSettings, deleteApiKey, getUsage, resetUsage, testApiConnection, getProfile, updateProfile } from "@/src/lib/api";
-import { Key, Globe, BookOpen, Check, Eye, EyeOff, Save, Loader2, Lock, Trash2, AlertTriangle, RotateCcw, X, Activity, Zap, Info, Target, HardDrive, Download, Upload } from "lucide-react";
+import { Key, Globe, BookOpen, Check, Eye, EyeOff, Save, Loader2, Lock, Trash2, AlertTriangle, RotateCcw, X, Activity, Zap, Info, Target, HardDrive, Download, Upload, Languages } from "lucide-react";
 import { deleteAllVocab, resetWordStats, resetGrammarMastery, deleteAllScenarioSessions, deleteWritingSessions, backupDb, restoreDb } from "@/src/lib/api";
 
 const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
-const LEVEL_DESC: Record<string, string> = {
-  A1: "Beginner", A2: "Elementary", B1: "Intermediate",
-  B2: "Upper-Int.", C1: "Advanced", C2: "Mastery",
-};
 
 const ENGLISH = SUPPORTED_LANGUAGES.find((l) => l.code === "en")!;
 const SECONDARY_LANGUAGES = SUPPORTED_LANGUAGES.filter((l) => l.code !== "en");
 
 export default function SettingsPage() {
+  const t = useTranslations("settings");
+  const router = useRouter();
+  const uiLocale = useLocale();
   const { userLevel, setUserLevel, translationLanguages, setTranslationLanguages } = useAppStore();
 
   // API key
@@ -33,6 +36,9 @@ export default function SettingsPage() {
   type TestState = "idle" | "testing" | "ok" | "error";
   const [testState, setTestState] = useState<TestState>("idle");
   const [testError, setTestError] = useState("");
+
+  // UI language (app chrome) — persisted per-user in the backend
+  const [uiLangSaving, setUiLangSaving] = useState(false);
 
   // Language state
   const currentSecondary = translationLanguages.find((l) => l.code !== "en");
@@ -82,7 +88,7 @@ export default function SettingsPage() {
       setKeySaved(true);
       setTimeout(() => setKeySaved(false), 3000);
     } catch (e: any) {
-      setKeyError(e.message || "Failed to save key");
+      setKeyError(e.message || t("errors.saveKey"));
     } finally {
       setKeySaving(false);
     }
@@ -97,7 +103,7 @@ export default function SettingsPage() {
       setTestState("ok");
       setTimeout(() => setTestState("idle"), 4000);
     } catch (e: any) {
-      const msg = e.message || "Connection failed";
+      const msg = e.message || t("errors.connection");
       setTestError(msg.replace(/^API \d+: /, ""));
       setTestState("error");
       setTimeout(() => setTestState("idle"), 6000);
@@ -114,10 +120,21 @@ export default function SettingsPage() {
       setMaskedKey("");
       setConfirmDelete(false);
     } catch (e: any) {
-      setKeyError(e.message || "Failed to remove key");
+      setKeyError(e.message || t("errors.removeKey"));
     } finally {
       setKeyDeleting(false);
     }
+  };
+
+  const handleSelectUiLocale = async (code: UiLocale) => {
+    if (code === uiLocale || uiLangSaving) return;
+    setUiLangSaving(true);
+    try {
+      await updateProfile({ ui_language: code });
+    } catch { /* still switch locally — cookie is the render source */ }
+    applyUiLocaleCookie(code);
+    router.refresh();
+    setUiLangSaving(false);
   };
 
   const handleApplyLangs = () => {
@@ -177,7 +194,7 @@ export default function SettingsPage() {
       await restoreDb(restoreFile);
       setRestoreState("done");
     } catch (e: any) {
-      setRestoreError(e.message || "Restore failed");
+      setRestoreError(e.message || t("errors.restore"));
       setRestoreState("error");
     } finally {
       setRestoreFile(null);
@@ -194,7 +211,7 @@ export default function SettingsPage() {
       setResetLearningsState("done");
       setTimeout(() => setResetLearningsState("idle"), 3000);
     } catch {
-      setDangerError("Failed to reset. Please try again.");
+      setDangerError(t("errors.reset"));
       setResetLearningsState("idle");
     }
   };
@@ -209,7 +226,7 @@ export default function SettingsPage() {
       setDeleteVocabState("done");
       setTimeout(() => setDeleteVocabState("idle"), 3000);
     } catch {
-      setDangerError("Failed to delete. Please try again.");
+      setDangerError(t("errors.delete"));
       setDeleteVocabState("idle");
     }
   };
@@ -219,9 +236,54 @@ export default function SettingsPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Settings</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Configure your DeutschPath experience</p>
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{t("title")}</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t("subtitle")}</p>
       </div>
+
+      {/* ── App Language (UI chrome) ── */}
+      <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-sky-100 dark:bg-sky-900/20 flex items-center justify-center shrink-0">
+            <Languages size={17} className="text-sky-600 dark:text-sky-300" />
+          </div>
+          <div>
+            <h2 className="font-semibold text-slate-800 dark:text-slate-100">{t("uiLang.heading")}</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t("uiLang.desc")}</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {UI_LOCALES.map((code) => {
+            const selected = uiLocale === code;
+            return (
+              <button
+                key={code}
+                onClick={() => handleSelectUiLocale(code)}
+                disabled={uiLangSaving}
+                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-start transition-all disabled:opacity-60 ${
+                  selected
+                    ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20 shadow-sm"
+                    : "border-slate-200 dark:border-slate-700 hover:border-slate-300 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                }`}
+              >
+                <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                  selected ? "border-brand-500" : "border-slate-300 dark:border-slate-600"
+                }`}>
+                  {selected && <span className="w-2 h-2 rounded-full bg-brand-500" />}
+                </span>
+                <div className="min-w-0">
+                  <p className={`text-xs font-semibold leading-tight ${selected ? "text-brand-700 dark:text-brand-300" : "text-slate-700 dark:text-slate-200"}`}>
+                    {t(`uiLang.names.${code}`)}
+                  </p>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-tight truncate mt-0.5" dir={code === "en" ? "ltr" : "rtl"}>
+                    {UI_LOCALE_LABELS[code].nativeName}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-[11px] text-slate-400 dark:text-slate-500">{t("uiLang.note")}</p>
+      </section>
 
       {/* ── Gemini API Key ── */}
       <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 space-y-4">
@@ -230,16 +292,16 @@ export default function SettingsPage() {
             <Key size={17} className="text-amber-600 dark:text-amber-300" />
           </div>
           <div>
-            <h2 className="font-semibold text-slate-800 dark:text-slate-100">Gemini API Key</h2>
+            <h2 className="font-semibold text-slate-800 dark:text-slate-100">{t("apiKey.heading")}</h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Required for AI word analysis, grammar, and scenarios.{" "}
+              {t("apiKey.desc")}{" "}
               <a
                 href="https://aistudio.google.com/apikey"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-brand-600 dark:text-brand-400 hover:underline"
               >
-                Get a free key →
+                {t("apiKey.getFreeKey")}
               </a>
             </p>
           </div>
@@ -249,30 +311,30 @@ export default function SettingsPage() {
           <div className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2 rounded-lg border border-emerald-100 dark:border-emerald-900/40">
             <Check size={14} className="shrink-0" />
             <span className="flex-1">
-              Current key: <code className="font-mono">{maskedKey}</code>
+              {t("apiKey.currentKey")} <code className="font-mono" dir="ltr">{maskedKey}</code>
             </span>
             {confirmDelete ? (
               <>
-                <span className="text-xs text-red-600 dark:text-red-400 font-medium">Remove this key?</span>
+                <span className="text-xs text-red-600 dark:text-red-400 font-medium">{t("apiKey.removeThisKey")}</span>
                 <button
                   onClick={handleDeleteKey}
                   disabled={keyDeleting}
                   className="flex items-center gap-1 px-2.5 py-1 bg-red-500 text-white text-xs font-semibold rounded-lg hover:bg-red-600 disabled:opacity-50 transition-colors"
                 >
                   {keyDeleting ? <Loader2 size={11} className="animate-spin" /> : null}
-                  Yes, remove
+                  {t("apiKey.yesRemove")}
                 </button>
                 <button
                   onClick={() => setConfirmDelete(false)}
                   className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 px-1"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </button>
               </>
             ) : (
               <button
                 onClick={() => setConfirmDelete(true)}
-                title="Remove API key"
+                title={t("apiKey.removeKeyTitle")}
                 className="p-1 rounded-lg text-emerald-400 dark:text-emerald-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
               >
                 <X size={14} />
@@ -283,7 +345,7 @@ export default function SettingsPage() {
         {!keyIsSet && (
           <div className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 rounded-lg border border-amber-100 dark:border-amber-900/40">
             <Key size={14} className="shrink-0" />
-            No API key set — AI features will not work until you add one.
+            {t("apiKey.noKeySet")}
           </div>
         )}
 
@@ -291,10 +353,9 @@ export default function SettingsPage() {
         <div className="flex items-start gap-2 text-xs text-slate-500 dark:text-slate-400 bg-blue-50 dark:bg-blue-900/10 px-3 py-2 rounded-lg border border-blue-100 dark:border-blue-900/30">
           <Info size={13} className="shrink-0 mt-0.5 text-blue-500 dark:text-blue-400" />
           <span>
-            Google AI Studio now issues keys starting with{" "}
-            <code className="font-mono text-slate-700 dark:text-slate-300">AQ.</code>{" "}
-            (e.g. <code className="font-mono text-slate-700 dark:text-slate-300">AQ.Ab8R…</code>).
-            Old <code className="font-mono">AIza…</code> keys are being deprecated — generate a new key in AI Studio if yours starts with <code className="font-mono">AIza</code>.
+            {t.rich("apiKey.formatNotice", {
+              code: (c) => <code className="font-mono text-slate-700 dark:text-slate-300" dir="ltr">{c}</code>,
+            })}
           </span>
         </div>
 
@@ -305,8 +366,9 @@ export default function SettingsPage() {
               value={apiKey}
               onChange={(e) => { setApiKey(e.target.value); setTestState("idle"); }}
               onKeyDown={(e) => e.key === "Enter" && handleSaveKey()}
-              placeholder={keyIsSet ? "Enter new key to replace existing…" : "AQ.Ab8R… or AIza… (paste your key here)"}
-              className="w-full px-3 py-2.5 pr-10 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-mono focus:outline-none focus:border-brand-400 bg-slate-50 dark:bg-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-700 dark:placeholder-slate-500 transition-colors"
+              placeholder={keyIsSet ? t("apiKey.placeholderReplace") : t("apiKey.placeholderNew")}
+              dir="ltr"
+              className="w-full px-3 py-2.5 pe-10 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-mono focus:outline-none focus:border-brand-400 bg-slate-50 dark:bg-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-700 dark:placeholder-slate-500 transition-colors"
             />
             <button
               onClick={() => setShowKey((v) => !v)}
@@ -318,7 +380,7 @@ export default function SettingsPage() {
           <button
             onClick={handleTestKey}
             disabled={testState === "testing" || (!apiKey.trim() && !keyIsSet)}
-            title="Test if the key connects to Gemini"
+            title={t("apiKey.testTitle")}
             className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-semibold rounded-xl transition-colors shrink-0 ${
               testState === "ok"
                 ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300"
@@ -328,7 +390,7 @@ export default function SettingsPage() {
             }`}
           >
             {testState === "testing" ? <Loader2 size={14} className="animate-spin" /> : testState === "ok" ? <Check size={14} /> : <Zap size={14} />}
-            {testState === "testing" ? "Testing…" : testState === "ok" ? "Connected!" : "Test"}
+            {testState === "testing" ? t("apiKey.testing") : testState === "ok" ? t("apiKey.connected") : t("apiKey.test")}
           </button>
           <button
             onClick={handleSaveKey}
@@ -336,7 +398,7 @@ export default function SettingsPage() {
             className="flex items-center gap-1.5 px-4 py-2.5 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 disabled:opacity-40 transition-colors shrink-0"
           >
             {keySaving ? <Loader2 size={14} className="animate-spin" /> : keySaved ? <Check size={14} /> : <Save size={14} />}
-            {keySaved ? "Saved!" : "Save"}
+            {keySaved ? t("common.savedBang") : t("common.save")}
           </button>
         </div>
         {keyError && <p className="text-xs text-red-500">{keyError}</p>}
@@ -353,9 +415,9 @@ export default function SettingsPage() {
               <Globe size={17} className="text-blue-600 dark:text-blue-300" />
             </div>
             <div>
-              <h2 className="font-semibold text-slate-800 dark:text-slate-100">Your Language</h2>
+              <h2 className="font-semibold text-slate-800 dark:text-slate-100">{t("yourLang.heading")}</h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                AI explanations will be shown in your selected language(s).
+                {t("yourLang.desc")}
               </p>
             </div>
           </div>
@@ -366,19 +428,19 @@ export default function SettingsPage() {
             }`}
           >
             <Check size={13} />
-            {langSaved ? "Applied!" : "Apply"}
+            {langSaved ? t("yourLang.applied") : t("yourLang.apply")}
           </button>
         </div>
 
         {/* English toggle */}
         <div>
-          <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">English</p>
+          <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">{t("yourLang.english")}</p>
           <button
             onClick={() => {
               if (englishOn && !secondaryCode) return; // last one — can't turn off
               setEnglishOn((v) => !v);
             }}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-start transition-all ${
               englishOn
                 ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20 shadow-sm"
                 : "border-slate-200 dark:border-slate-700 hover:border-slate-300 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/50"
@@ -390,11 +452,11 @@ export default function SettingsPage() {
               {englishOn && <Check size={10} className="text-white" />}
             </span>
             <div>
-              <p className={`text-sm font-semibold ${englishOn ? "text-brand-700 dark:text-brand-300" : "text-slate-700 dark:text-slate-200"}`}>English</p>
+              <p className={`text-sm font-semibold ${englishOn ? "text-brand-700 dark:text-brand-300" : "text-slate-700 dark:text-slate-200"}`}>{t("yourLang.english")}</p>
               <p className="text-xs text-slate-400 dark:text-slate-500">English</p>
             </div>
             {englishOn && !secondaryCode && (
-              <span className="ml-auto text-[10px] text-slate-400 dark:text-slate-500 italic">select another language to disable</span>
+              <span className="ms-auto text-[10px] text-slate-400 dark:text-slate-500 italic">{t("yourLang.selectAnotherToDisable")}</span>
             )}
           </button>
         </div>
@@ -402,14 +464,14 @@ export default function SettingsPage() {
         {/* Secondary language — user picks one or none */}
         <div>
           <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">
-            Second language <span className="text-slate-300 dark:text-slate-600 font-normal normal-case">— optional</span>
+            {t("yourLang.secondLanguage")} <span className="text-slate-300 dark:text-slate-600 font-normal normal-case">{t("yourLang.optionalDash")}</span>
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {/* None option */}
             <button
               onClick={() => { if (!englishOn) return; setSecondaryCode(""); }}
               disabled={!englishOn}
-              className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-left transition-all ${
+              className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-start transition-all ${
                 secondaryCode === "" && englishOn
                   ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20 shadow-sm"
                   : !englishOn
@@ -424,10 +486,10 @@ export default function SettingsPage() {
               </span>
               <div className="min-w-0">
                 <p className={`text-xs font-semibold leading-tight ${secondaryCode === "" && englishOn ? "text-brand-700 dark:text-brand-300" : "text-slate-700 dark:text-slate-200"}`}>
-                  None
+                  {t("yourLang.none")}
                 </p>
                 <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-tight truncate mt-0.5">
-                  No second language
+                  {t("yourLang.noSecondLanguage")}
                 </p>
               </div>
             </button>
@@ -437,7 +499,7 @@ export default function SettingsPage() {
                 <button
                   key={lang.code}
                   onClick={() => setSecondaryCode(lang.code)}
-                  className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-left transition-all ${
+                  className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-start transition-all ${
                     selected
                       ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20 shadow-sm"
                       : "border-slate-200 dark:border-slate-700 hover:border-slate-300 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/50"
@@ -466,21 +528,25 @@ export default function SettingsPage() {
         {/* Preview */}
         <div className="px-4 py-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400">
           {englishOn && !secondaryCode && (
-            <>Explanations will be shown in <span className="font-semibold text-slate-700 dark:text-slate-200">English</span> only.</>
+            t.rich("yourLang.previewEnglishOnly", {
+              b: (c) => <span className="font-semibold text-slate-700 dark:text-slate-200">{c}</span>,
+            })
           )}
           {!englishOn && secondaryCode && secondLangObj && (
-            <>Explanations will be shown in{" "}
-              <span className="font-semibold text-slate-700 dark:text-slate-200" dir={secondLangObj.rtl ? "rtl" : "ltr"}>
-                {secondLangObj.nativeName} ({secondLangObj.name})
-              </span>{" "}only.</>
+            t.rich("yourLang.previewSecondaryOnly", {
+              lang: `${secondLangObj.nativeName} (${secondLangObj.name})`,
+              b: (c) => (
+                <span className="font-semibold text-slate-700 dark:text-slate-200" dir={secondLangObj.rtl ? "rtl" : "ltr"}>
+                  {c}
+                </span>
+              ),
+            })
           )}
           {englishOn && secondaryCode && secondLangObj && (
-            <>Explanations will be shown in{" "}
-              <span className="font-semibold text-slate-700 dark:text-slate-200">English</span>
-              {" "}+{" "}
-              <span className="font-semibold text-slate-700 dark:text-slate-200" dir={secondLangObj.rtl ? "rtl" : "ltr"}>
-                {secondLangObj.nativeName} ({secondLangObj.name})
-              </span>.</>
+            t.rich("yourLang.previewBoth", {
+              lang: `${secondLangObj.nativeName} (${secondLangObj.name})`,
+              b: (c) => <span className="font-semibold text-slate-700 dark:text-slate-200">{c}</span>,
+            })
           )}
         </div>
       </section>
@@ -492,9 +558,9 @@ export default function SettingsPage() {
             <BookOpen size={17} className="text-green-600 dark:text-green-300" />
           </div>
           <div>
-            <h2 className="font-semibold text-slate-800 dark:text-slate-100">Your German Level</h2>
+            <h2 className="font-semibold text-slate-800 dark:text-slate-100">{t("level.heading")}</h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Affects AI explanation difficulty, scenario complexity, and vocabulary hints.
+              {t("level.desc")}
             </p>
           </div>
         </div>
@@ -511,7 +577,7 @@ export default function SettingsPage() {
             >
               <div className="text-sm font-bold">{level}</div>
               <div className={`text-[9px] font-normal mt-0.5 ${userLevel === level ? "text-white/70" : "text-slate-400 dark:text-slate-500"}`}>
-                {LEVEL_DESC[level]}
+                {t(`level.desc_${level}`)}
               </div>
             </button>
           ))}
@@ -525,9 +591,9 @@ export default function SettingsPage() {
             <Target size={17} className="text-orange-600 dark:text-orange-300" />
           </div>
           <div>
-            <h2 className="font-semibold text-slate-800 dark:text-slate-100">Daily Learning Goal</h2>
+            <h2 className="font-semibold text-slate-800 dark:text-slate-100">{t("goal.heading")}</h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              How many new words you aim to save each day. Shown as a progress bar on the dashboard.
+              {t("goal.desc")}
             </p>
           </div>
         </div>
@@ -556,11 +622,11 @@ export default function SettingsPage() {
               +
             </button>
           </div>
-          <span className="text-sm text-slate-500 dark:text-slate-400">words per day</span>
+          <span className="text-sm text-slate-500 dark:text-slate-400">{t("goal.wordsPerDay")}</span>
           <button
             onClick={handleSaveGoal}
             disabled={goalSaving}
-            className={`ml-auto flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl transition-colors disabled:opacity-50 ${
+            className={`ms-auto flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl transition-colors disabled:opacity-50 ${
               goalSaved
                 ? "bg-emerald-600 text-white"
                 : "bg-brand-600 text-white hover:bg-brand-700"
@@ -573,7 +639,7 @@ export default function SettingsPage() {
             ) : (
               <Save size={14} />
             )}
-            {goalSaved ? "Saved!" : "Save goal"}
+            {goalSaved ? t("common.savedBang") : t("goal.saveGoal")}
           </button>
         </div>
       </section>
@@ -586,16 +652,16 @@ export default function SettingsPage() {
               <Activity size={17} className="text-violet-600 dark:text-violet-400" />
             </div>
             <div>
-              <h2 className="font-semibold text-slate-800 dark:text-slate-100">API Usage</h2>
+              <h2 className="font-semibold text-slate-800 dark:text-slate-100">{t("usage.heading")}</h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Tracked by this app only.{" "}
+                {t("usage.trackedBy")}{" "}
                 <a
                   href="https://aistudio.google.com/apikey"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-violet-600 dark:text-violet-400 hover:underline"
                 >
-                  See full usage in AI Studio →
+                  {t("usage.seeFullUsage")}
                 </a>
               </p>
             </div>
@@ -606,7 +672,7 @@ export default function SettingsPage() {
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 transition-colors"
           >
             {usageResetting ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />}
-            Reset counter
+            {t("usage.resetCounter")}
           </button>
         </div>
 
@@ -615,14 +681,14 @@ export default function SettingsPage() {
             {/* Text API counters */}
             <div>
               <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-1.5">
-                Text / Analysis <span className="font-normal normal-case text-slate-300 dark:text-slate-600">— free tier: 10 RPM · 250 req/day</span>
+                {t("usage.textAnalysis")} <span className="font-normal normal-case text-slate-300 dark:text-slate-600">{t("usage.textFreeTier")}</span>
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[
-                  { label: "API Calls",       value: usage.calls.toLocaleString(),         color: "text-violet-600 dark:text-violet-400" },
-                  { label: "Input tokens",    value: usage.input_tokens.toLocaleString(),   color: "text-blue-600 dark:text-blue-400" },
-                  { label: "Output tokens",   value: usage.output_tokens.toLocaleString(),  color: "text-indigo-600 dark:text-indigo-400" },
-                  { label: "Thinking tokens", value: usage.thought_tokens.toLocaleString(), color: "text-purple-600 dark:text-purple-400" },
+                  { label: t("usage.apiCalls"),       value: usage.calls.toLocaleString(),         color: "text-violet-600 dark:text-violet-400" },
+                  { label: t("usage.inputTokens"),    value: usage.input_tokens.toLocaleString(),   color: "text-blue-600 dark:text-blue-400" },
+                  { label: t("usage.outputTokens"),   value: usage.output_tokens.toLocaleString(),  color: "text-indigo-600 dark:text-indigo-400" },
+                  { label: t("usage.thinkingTokens"), value: usage.thought_tokens.toLocaleString(), color: "text-purple-600 dark:text-purple-400" },
                 ].map(({ label, value, color }) => (
                   <div key={label} className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3">
                     <p className={`text-lg font-bold ${color}`}>{value}</p>
@@ -635,14 +701,14 @@ export default function SettingsPage() {
             {/* TTS counters */}
             <div>
               <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-1.5">
-                Voice / TTS{" "}
-                <span className="font-normal normal-case text-amber-500 dark:text-amber-400">— no free tier, always paid</span>
+                {t("usage.voiceTts")}{" "}
+                <span className="font-normal normal-case text-amber-500 dark:text-amber-400">{t("usage.ttsNoFreeTier")}</span>
               </p>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { label: "TTS Calls",      value: usage.tts_calls.toLocaleString(),         color: "text-orange-600 dark:text-orange-400" },
-                  { label: "Input tokens",   value: usage.tts_input_tokens.toLocaleString(),   color: "text-orange-500 dark:text-orange-400" },
-                  { label: "Output tokens",  value: usage.tts_output_tokens.toLocaleString(),  color: "text-rose-600 dark:text-rose-400" },
+                  { label: t("usage.ttsCalls"),      value: usage.tts_calls.toLocaleString(),         color: "text-orange-600 dark:text-orange-400" },
+                  { label: t("usage.inputTokens"),   value: usage.tts_input_tokens.toLocaleString(),   color: "text-orange-500 dark:text-orange-400" },
+                  { label: t("usage.outputTokens"),  value: usage.tts_output_tokens.toLocaleString(),  color: "text-rose-600 dark:text-rose-400" },
                 ].map(({ label, value, color }) => (
                   <div key={label} className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3">
                     <p className={`text-lg font-bold ${color}`}>{value}</p>
@@ -656,26 +722,26 @@ export default function SettingsPage() {
             <div className="flex items-start gap-2 px-3 py-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400">
               <Info size={13} className="shrink-0 mt-0.5 text-slate-400 dark:text-slate-500" />
               <span>
-                Rough maximum at current paid-tier rates:{" "}
-                <span className="font-semibold text-slate-700 dark:text-slate-200">
-                  ~${usage.estimated_cost_usd.toFixed(4)}
-                </span>
-                {" "}(text ~${usage.text_cost_usd.toFixed(4)} + voice ~${usage.tts_cost_usd.toFixed(4)}).
-                Text usage is likely free. Voice has no free tier — keep auto-play off when not needed.{" "}
+                {t.rich("usage.costNote", {
+                  total: usage.estimated_cost_usd.toFixed(4),
+                  text: usage.text_cost_usd.toFixed(4),
+                  tts: usage.tts_cost_usd.toFixed(4),
+                  b: (c) => <span className="font-semibold text-slate-700 dark:text-slate-200">{c}</span>,
+                })}{" "}
                 <a
                   href="https://aistudio.google.com"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-violet-600 dark:text-violet-400 hover:underline font-medium"
                 >
-                  Check real usage in AI Studio →
+                  {t("usage.checkRealUsage")}
                 </a>
               </span>
             </div>
           </div>
         ) : (
           <div className="flex items-center justify-center py-6 text-slate-400 dark:text-slate-600 text-sm">
-            <Loader2 size={14} className="animate-spin mr-2" /> Loading…
+            <Loader2 size={14} className="animate-spin me-2" /> {t("common.loading")}
           </div>
         )}
       </section>
@@ -687,9 +753,9 @@ export default function SettingsPage() {
             <HardDrive size={17} className="text-teal-600 dark:text-teal-300" />
           </div>
           <div>
-            <h2 className="font-semibold text-slate-800 dark:text-slate-100">Data Backup</h2>
+            <h2 className="font-semibold text-slate-800 dark:text-slate-100">{t("backup.heading")}</h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Export your entire database — vocabulary, progress, grammar mastery, everything. Keep a copy somewhere safe.
+              {t("backup.desc")}
             </p>
           </div>
         </div>
@@ -702,14 +768,14 @@ export default function SettingsPage() {
             className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white text-sm font-semibold rounded-xl hover:bg-teal-700 disabled:opacity-50 transition-colors"
           >
             {backingUp ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-            {backingUp ? "Exporting…" : "Export backup"}
+            {backingUp ? t("backup.exporting") : t("backup.exportBackup")}
           </button>
 
           {/* Restore — hidden file input + button */}
           {restoreState === "idle" || restoreState === "error" ? (
             <label className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-sm font-semibold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer transition-colors">
               <Upload size={14} />
-              Restore from backup
+              {t("backup.restoreFromBackup")}
               <input type="file" accept=".db" className="hidden" onChange={handleRestoreSelect} />
             </label>
           ) : null}
@@ -720,20 +786,23 @@ export default function SettingsPage() {
           <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl flex-wrap">
             <AlertTriangle size={15} className="text-amber-600 dark:text-amber-400 shrink-0" />
             <p className="text-sm text-amber-800 dark:text-amber-200 flex-1">
-              Replace all current data with <span className="font-semibold">{restoreFile.name}</span>?
+              {t.rich("backup.replaceConfirm", {
+                file: restoreFile.name,
+                b: (c) => <span className="font-semibold" dir="ltr">{c}</span>,
+              })}
             </p>
             <div className="flex gap-2">
               <button
                 onClick={handleRestoreConfirm}
                 className="px-3 py-1.5 bg-amber-600 text-white text-xs font-semibold rounded-lg hover:bg-amber-700 transition-colors"
               >
-                Yes, restore
+                {t("backup.yesRestore")}
               </button>
               <button
                 onClick={() => { setRestoreState("idle"); setRestoreFile(null); }}
                 className="px-3 py-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
             </div>
           </div>
@@ -741,7 +810,7 @@ export default function SettingsPage() {
 
         {restoreState === "loading" && (
           <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-            <Loader2 size={14} className="animate-spin" /> Restoring database…
+            <Loader2 size={14} className="animate-spin" /> {t("backup.restoring")}
           </div>
         )}
 
@@ -749,13 +818,13 @@ export default function SettingsPage() {
           <div className="flex items-center gap-2 px-4 py-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl">
             <Check size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
             <p className="text-sm text-emerald-800 dark:text-emerald-200 flex-1">
-              Database restored successfully.
+              {t("backup.restored")}
             </p>
             <button
               onClick={() => window.location.reload()}
               className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-700 transition-colors"
             >
-              Reload app
+              {t("backup.reloadApp")}
             </button>
           </div>
         )}
@@ -772,8 +841,8 @@ export default function SettingsPage() {
             <AlertTriangle size={17} className="text-red-600 dark:text-red-300" />
           </div>
           <div>
-            <h2 className="font-semibold text-slate-800 dark:text-slate-100">Danger Zone</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">These actions are irreversible. Please be careful.</p>
+            <h2 className="font-semibold text-slate-800 dark:text-slate-100">{t("danger.heading")}</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t("danger.desc")}</p>
           </div>
         </div>
 
@@ -785,9 +854,9 @@ export default function SettingsPage() {
           {/* Reset all learnings */}
           <div className="py-4 first:pt-0 last:pb-0 flex items-center justify-between gap-4 flex-wrap">
             <div>
-              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Reset all learnings</p>
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{t("danger.resetLearnings")}</p>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Resets grammar mastery, word SRS intervals, and clears all scenario and writing session history.
+                {t("danger.resetLearningsDesc")}
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
@@ -796,7 +865,7 @@ export default function SettingsPage() {
                   onClick={() => setResetLearningsState("idle")}
                   className="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </button>
               )}
               <button
@@ -818,10 +887,10 @@ export default function SettingsPage() {
                   <RotateCcw size={12} />
                 )}
                 {resetLearningsState === "done"
-                  ? "Reset!"
+                  ? t("danger.resetDone")
                   : resetLearningsState === "confirming"
-                  ? "Confirm reset"
-                  : "Reset learnings"}
+                  ? t("danger.confirmReset")
+                  : t("danger.resetLearningsBtn")}
               </button>
             </div>
           </div>
@@ -829,9 +898,9 @@ export default function SettingsPage() {
           {/* Delete all vocabulary */}
           <div className="py-4 first:pt-0 last:pb-0 flex items-center justify-between gap-4 flex-wrap">
             <div>
-              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Delete all vocabulary</p>
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{t("danger.deleteVocab")}</p>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Permanently deletes every saved word from your vocabulary list.
+                {t("danger.deleteVocabDesc")}
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
@@ -840,7 +909,7 @@ export default function SettingsPage() {
                   onClick={() => setDeleteVocabState("idle")}
                   className="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </button>
               )}
               <button
@@ -862,10 +931,10 @@ export default function SettingsPage() {
                   <Trash2 size={12} />
                 )}
                 {deleteVocabState === "done"
-                  ? "Deleted!"
+                  ? t("danger.deleted")
                   : deleteVocabState === "confirming"
-                  ? "Confirm delete"
-                  : "Delete vocabulary"}
+                  ? t("danger.confirmDelete")
+                  : t("danger.deleteVocabBtn")}
               </button>
             </div>
           </div>

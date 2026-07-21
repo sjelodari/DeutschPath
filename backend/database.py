@@ -46,6 +46,16 @@ def _migrate_sqlite():
         if "translations" not in existing_gr:
             conn.execute(text("ALTER TABLE grammar_rules ADD COLUMN translations TEXT DEFAULT '{}'"))
 
+        # One-time data fixes, keyed in schema_meta so they never re-run.
+        conn.execute(text("CREATE TABLE IF NOT EXISTS schema_meta (key TEXT PRIMARY KEY, value TEXT)"))
+        done = {row[0] for row in conn.execute(text("SELECT key FROM schema_meta")).fetchall()}
+        if "ui_language_reset_v1" not in done:
+            # ui_language rows written before the UI-language feature existed hold
+            # a dead Python-side default ('fa') the user never chose. NULL means
+            # "never chosen" so the frontend can derive a sensible default.
+            conn.execute(text("UPDATE user_profiles SET ui_language = NULL"))
+            conn.execute(text("INSERT INTO schema_meta (key, value) VALUES ('ui_language_reset_v1', '1')"))
+
         existing_ann = {row[1] for row in conn.execute(text("PRAGMA table_info(annotations)")).fetchall()}
         if "mark_type" not in existing_ann:
             conn.execute(text("ALTER TABLE annotations ADD COLUMN mark_type TEXT DEFAULT 'text'"))

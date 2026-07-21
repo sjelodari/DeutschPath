@@ -3,6 +3,7 @@
 import { X, BookmarkPlus, Check, ChevronDown, ChevronUp } from "lucide-react";
 import { LevelBadge } from "@/src/components/layout/LevelBadge";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 interface Props {
   analysis: any;
@@ -13,16 +14,10 @@ interface Props {
   position: { x: number; y: number };
 }
 
-const TYPE_LABELS: Record<string, string> = {
-  noun: "Noun (Nomen)",
-  verb: "Verb",
-  adjective: "Adjective (Adjektiv)",
-  adverb: "Adverb",
-  phrase: "Phrase",
-  other: "Other",
-};
+const KNOWN_TYPES = new Set(["noun", "verb", "adjective", "adverb", "phrase", "other"]);
 
 export function WordExplanationCard({ analysis, onSave, onClose, saved, loading, position }: Props) {
+  const t = useTranslations("wordCard");
   const [showExtra, setShowExtra] = useState(false);
   const extra = analysis.extra_info || {};
   const hasConjugation = extra.conjugation && Object.keys(extra.conjugation).length > 0;
@@ -48,7 +43,7 @@ export function WordExplanationCard({ analysis, onSave, onClose, saved, loading,
             {analysis.cefr_level && <LevelBadge level={analysis.cefr_level} />}
           </div>
           <span className="text-xs text-brand-600 font-medium">
-            {TYPE_LABELS[analysis.word_type] ?? analysis.word_type}
+            {KNOWN_TYPES.has(analysis.word_type) ? t(`type_${analysis.word_type}`) : analysis.word_type}
           </span>
         </div>
         <button onClick={onClose} className="text-slate-400 hover:text-slate-600 mt-0.5">
@@ -71,7 +66,7 @@ export function WordExplanationCard({ analysis, onSave, onClose, saved, loading,
       {/* Example */}
       {analysis.example_de && (
         <div className="px-4 pb-3 space-y-1">
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Example</p>
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">{t("example")}</p>
           <p className="text-slate-700 italic">{analysis.example_de}</p>
           <p className="text-slate-500 text-xs">{analysis.example_en}</p>
           <p className="text-slate-500 text-xs rtl text-right">{analysis.example_fa}</p>
@@ -86,20 +81,20 @@ export function WordExplanationCard({ analysis, onSave, onClose, saved, loading,
             className="flex items-center gap-1 text-xs text-brand-600 hover:text-brand-800 font-medium"
           >
             {showExtra ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-            {showExtra ? "Hide" : "Show"} details
+            {showExtra ? t("hideDetails") : t("showDetails")}
           </button>
           {showExtra && (
             <div className="mt-2 space-y-2 text-xs text-slate-600">
-              {extra.plural && <p><span className="font-semibold">Plural:</span> {extra.plural}</p>}
+              {extra.plural && <p><span className="font-semibold">{t("plural")}</span> {extra.plural}</p>}
               {extra.past_participle && (
                 <p>
-                  <span className="font-semibold">Past participle:</span> {extra.past_participle}
+                  <span className="font-semibold">{t("pastParticiple")}</span> {extra.past_participle}
                   {extra.auxiliary && ` (+ ${extra.auxiliary})`}
                 </p>
               )}
               {hasConjugation && (
                 <div>
-                  <p className="font-semibold mb-1">Conjugation (Präsens):</p>
+                  <p className="font-semibold mb-1">{t("conjugation")}</p>
                   <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
                     {Object.entries(extra.conjugation).map(([pronoun, form]) => (
                       <span key={pronoun}>{pronoun}: <strong>{form as string}</strong></span>
@@ -124,7 +119,7 @@ export function WordExplanationCard({ analysis, onSave, onClose, saved, loading,
           }`}
         >
           {saved ? <Check size={14} /> : <BookmarkPlus size={14} />}
-          {saved ? "Saved!" : loading ? "Saving..." : "Save Word"}
+          {saved ? t("savedBang") : loading ? t("saving") : t("saveWord")}
         </button>
       </div>
     </div>

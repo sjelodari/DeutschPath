@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { X, Pencil } from "lucide-react";
 
 export type MarkType = "text" | "x" | "dot" | "check" | "circle" | "highlight";
@@ -36,6 +37,7 @@ export function AnnotationLayer({
   annotations, pending, onSave, onCancel, onDelete, onUpdate,
   pendingColor = "#EF4444", pendingFontSize = 12,
 }: Props) {
+  const t = useTranslations("annotations");
   const [draft, setDraft] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -153,7 +155,7 @@ export function AnnotationLayer({
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={(e) => { e.stopPropagation(); setEditingId(ann.id); setEditDraft(ann.content); }}
                 className="absolute -top-2 -left-2 w-4 h-4 bg-slate-700 hover:bg-brand-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow z-10"
-                title="Edit"
+                title={t("edit")}
               >
                 <Pencil size={7} />
               </button>
@@ -161,7 +163,7 @@ export function AnnotationLayer({
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={(e) => { e.stopPropagation(); onDelete(ann.id); }}
                 className="absolute -top-2 -right-2 w-4 h-4 bg-slate-700 hover:bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow z-10"
-                title="Delete"
+                title={t("delete")}
               >
                 <X size={8} />
               </button>
@@ -221,7 +223,7 @@ export function AnnotationLayer({
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={handleKeyDown}
               onBlur={handleBlur}
-              placeholder="Type note…"
+              placeholder={t("typeNote")}
               rows={2}
               className="w-44 px-2 py-0 bg-transparent resize-none focus:outline-none"
               style={{

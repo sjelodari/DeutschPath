@@ -62,6 +62,18 @@ EN_PATH = MESSAGES_DIR / "en.json"
 
 MODEL = "gemini-2.5-flash"
 
+# ── Cross-platform safety (Windows) ────────────────────────────────────────────
+# `npx` resolves to `npx.cmd` on Windows; passing bare "npx" to subprocess there
+# fails with WinError 2 because the .cmd extension isn't auto-resolved.
+NPX = "npx.cmd" if os.name == "nt" else "npx"
+# This script prints native language names (e.g. اردو, Türkçe) to stdout; a
+# legacy (non-UTF-8) Windows console would raise UnicodeEncodeError on them.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 # ── Load validate_languages.py as a module so regexes/helpers aren't duplicated ──
 _spec = importlib.util.spec_from_file_location("validate_languages", VALIDATE_SCRIPT_PATH)
 validate_languages = importlib.util.module_from_spec(_spec)
@@ -395,7 +407,7 @@ def merge_language_names(new_language_name_in: dict, existing_names_in_new: dict
         if dry_run:
             log(f"  [dry-run] would add settings.uiLang.names.{code} = {new_language_name_in[existing_code]!r} to {path.name}")
         else:
-            path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
             log(f"  updated settings.uiLang.names in {path.name}")
     return existing_names_in_new  # merged into the new catalog itself by the caller
 
@@ -460,7 +472,7 @@ def patch_config_ts(code: str, name: str, native: str, direction: str, dry_run: 
             log(f"  [dry-run] would add \"{code}\" to RTL_LOCALES")
         log(f"  [dry-run] would add {new_label_line.strip()!r} to UI_LOCALE_LABELS")
     else:
-        CONFIG_TS_PATH.write_text(new_text, encoding="utf-8")
+        CONFIG_TS_PATH.write_text(new_text, encoding="utf-8", newline="\n")
         log(f"  updated {rel(CONFIG_TS_PATH)}")
 
 
@@ -492,7 +504,7 @@ def patch_validate_script(code: str, plural_categories: set[str], dry_run: bool)
     if dry_run:
         log(f"  [dry-run] would add {new_line.strip()!r} to CLDR_PLURAL_CATEGORIES")
     else:
-        VALIDATE_SCRIPT_PATH.write_text(new_text, encoding="utf-8")
+        VALIDATE_SCRIPT_PATH.write_text(new_text, encoding="utf-8", newline="\n")
         log(f"  updated {rel(VALIDATE_SCRIPT_PATH)}")
 
 
@@ -541,7 +553,7 @@ def main():
             log(f"  - {p}")
         if not args.dry_run:
             rejected_path = MESSAGES_DIR / f"{code}.rejected.json"
-            rejected_path.write_text(json.dumps(new_catalog, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            rejected_path.write_text(json.dumps(new_catalog, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
             log(f"\nSaved the generated (invalid) catalog to {rejected_path} for inspection/manual fixing.")
         sys.exit(1)
     log("In-memory validation passed (key parity, placeholders, plurals, rich-text tags).")
@@ -557,7 +569,7 @@ def main():
         out_path = MESSAGES_DIR / f"{code}.json"
         new_catalog_with_names = dict(new_catalog)
         new_catalog_with_names.setdefault("settings", {}).setdefault("uiLang", {})["names"] = existing_names_in_new
-        out_path.write_text(json.dumps(new_catalog_with_names, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        out_path.write_text(json.dumps(new_catalog_with_names, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
         log(f"  wrote {rel(out_path)}")
     else:
         log(f"  [dry-run] settings.uiLang.names in the new catalog would be: {existing_names_in_new}")
@@ -584,7 +596,7 @@ def main():
         sys.exit(1)
 
     log("Running npx tsc --noEmit (frontend)...")
-    tsc = subprocess.run(["npx", "tsc", "--noEmit"], cwd=str(REPO_ROOT / "frontend"), capture_output=True, text=True)
+    tsc = subprocess.run([NPX, "tsc", "--noEmit"], cwd=str(REPO_ROOT / "frontend"), capture_output=True, text=True)
     if tsc.returncode != 0:
         log(tsc.stdout)
         log(tsc.stderr)

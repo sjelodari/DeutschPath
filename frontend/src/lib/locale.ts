@@ -13,10 +13,11 @@ const UMLAUT_MAP: Record<string, string> = {
 const COMBINING_DIACRITICS = /[̀-ͯ]/g;
 
 /**
- * Derives the same stable slug used as the `grammar.ruleName_<slug>` message
- * key for a given GrammarRule.name (e.g. "Present Tense (Präsens)" ->
- * "present_tense_praesens"). Must stay in sync with the Python slug()
- * used when the catalogs were generated (see scratchpad/add_rule_names.py).
+ * Derives the stable slug used as the `grammar.ruleName_<slug>` message key
+ * for a given GrammarRule.name (e.g. "Present Tense (Präsens)" ->
+ * "present_tense_praesens"). Must produce slugs matching the `ruleName_*`
+ * keys already baked into the message catalogs (frontend/src/messages/*.json);
+ * on a miss, the caller falls back to the raw rule name.
  */
 export function slugifyRuleName(name: string): string {
   const transliterated = name.replace(/[äöüßÄÖÜ]/g, (c) => UMLAUT_MAP[c] ?? c);

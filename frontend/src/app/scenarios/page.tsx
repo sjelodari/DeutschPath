@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { LevelBadge } from "@/src/components/layout/LevelBadge";
 import { ConfirmLeaveDialog } from "@/src/components/layout/ConfirmLeaveDialog";
 import { listScenarios, chatScenario, batchAnalyzeWords, saveWord, ttsSpeak, NetworkError } from "@/src/lib/api";
@@ -51,6 +52,7 @@ interface ChatVocabBtn {
 }
 
 export default function ScenariosPage() {
+  const t = useTranslations("scenarios");
   const { userLevel, translationLanguages, hasPendingChat, setHasPendingChat } = useAppStore();
   const langs = translationLanguages.length > 0
     ? translationLanguages
@@ -129,7 +131,7 @@ export default function ScenariosPage() {
       const results = await batchAnalyzeWords([vocabBtn.text], userLevel, translationLanguages);
       if (results[0]) await saveWord(results[0]);
       clearTimeout(toastTimer.current);
-      setVocabToast(`"${vocabBtn.text}" saved!`);
+      setVocabToast(t("savedToast", { text: vocabBtn.text }));
       toastTimer.current = setTimeout(() => setVocabToast(""), 2500);
     } catch {
       // silent fail
@@ -152,7 +154,7 @@ export default function ScenariosPage() {
     setLastSuggestions([]);
     setMessages([{
       role: "system",
-      text: `You are now chatting with: ${selected.persona}`,
+      text: t("nowChattingWith", { persona: selected.persona }),
       emoji: selected.avatar_emoji,
     }, {
       role: "agent",
@@ -241,8 +243,8 @@ export default function ScenariosPage() {
       if (autoPlay) handleSpeak(res.agent_response);
     } catch (err) {
       const msg = err instanceof NetworkError
-        ? "⚡ Connection issue — please try again when you're back online."
-        : "Something went wrong on the AI side — please try again.";
+        ? t("connectionIssue")
+        : t("aiError");
       setMessages((m) => [...m, { role: "agent", text: msg }]);
     } finally {
       setSending(false);
@@ -270,9 +272,9 @@ export default function ScenariosPage() {
 
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-1">Scenarios</h1>
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-1">{t("title")}</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-          Practice real German conversations with AI characters. Each scenario has a goal — complete it!
+          {t("subtitle")}
         </p>
 
         {/* Filters */}
@@ -288,7 +290,7 @@ export default function ScenariosPage() {
                     : "bg-white text-slate-600 border-slate-200 hover:border-brand-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
                 }`}
               >
-                {l === "all" ? "All levels" : l}
+                {l === "all" ? t("allLevels") : l}
               </button>
             ))}
           </div>
@@ -298,8 +300,8 @@ export default function ScenariosPage() {
             onChange={(e) => setFilterType(e.target.value)}
             className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200"
           >
-            {types.map((t) => (
-              <option key={t} value={t}>{t === "all" ? "All types" : t}</option>
+            {types.map((ty) => (
+              <option key={ty} value={ty}>{ty === "all" ? t("allTypes") : t(`type${ty}`)}</option>
             ))}
           </select>
           <select
@@ -308,10 +310,10 @@ export default function ScenariosPage() {
             className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200"
           >
             {subjects.map((s) => (
-              <option key={s} value={s}>{s === "all" ? "All subjects" : s}</option>
+              <option key={s} value={s}>{s === "all" ? t("allSubjects") : s}</option>
             ))}
           </select>
-          <span className="text-xs text-slate-400 dark:text-slate-500 ml-auto">{filtered.length} scenarios</span>
+          <span className="text-xs text-slate-400 dark:text-slate-500 ms-auto">{t("scenarioCount", { count: filtered.length })}</span>
         </div>
 
         {/* Grid */}
@@ -320,7 +322,7 @@ export default function ScenariosPage() {
             <button
               key={s.id}
               onClick={() => startScenario(s)}
-              className="text-left p-5 bg-white rounded-2xl border border-slate-200 hover:border-brand-300 hover:shadow-md transition-all group dark:bg-slate-900 dark:border-slate-700 dark:hover:border-brand-700"
+              className="text-start p-5 bg-white rounded-2xl border border-slate-200 hover:border-brand-300 hover:shadow-md transition-all group dark:bg-slate-900 dark:border-slate-700 dark:hover:border-brand-700"
             >
               <div className="text-3xl mb-3">{s.avatar_emoji}</div>
               <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -338,16 +340,16 @@ export default function ScenariosPage() {
                       s.scenario_type === "Professional" ? "bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-300" :
                       s.scenario_type === "Formal" ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-300" :
                       "bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-300"
-                    }`}>{s.scenario_type}</span>
+                    }`}>{t(`type${s.scenario_type}`)}</span>
                   )}
                 </div>
               )}
-              <p className="text-xs text-brand-600 font-medium">Goal: {s.goal}</p>
+              <p className="text-xs text-brand-600 font-medium">{t("goalLabel")} {s.goal}</p>
             </button>
           ))}
           {filtered.length === 0 && (
             <div className="col-span-3 text-center py-16 text-slate-400 dark:text-slate-500">
-              No scenarios match these filters.
+              {t("noMatch")}
             </div>
           )}
         </div>
@@ -363,7 +365,7 @@ export default function ScenariosPage() {
           onClick={() => { setSelected(null); setPhase("list"); }}
           className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 mb-6 transition-colors"
         >
-          <ArrowLeft size={15} /> Back to scenarios
+          <ArrowLeft size={15} className="rtl:-scale-x-100" /> {t("backToScenarios")}
         </button>
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
           <div className="flex items-center gap-3 mb-4">
@@ -380,19 +382,19 @@ export default function ScenariosPage() {
           <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">{selected.description}</p>
 
           <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl px-4 py-3 mb-5">
-            <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-0.5">Your goal</p>
+            <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-0.5">{t("yourGoal")}</p>
             <p className="text-sm text-amber-800 dark:text-amber-300">{selected.goal}</p>
           </div>
 
           <div className="mb-6">
             <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">
-              Useful phrases to get started
+              {t("usefulPhrases")}
             </p>
             <div className="flex flex-col gap-2">
               {phrases.map((phrase, i) => (
                 <div key={i} className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 rounded-lg px-3 py-2">
                   <span className="text-brand-500 dark:text-brand-400 font-bold text-xs w-4 shrink-0">{i + 1}</span>
-                  <span className="text-sm text-slate-700 dark:text-slate-200 font-medium">{phrase}</span>
+                  <span className="text-sm text-slate-700 dark:text-slate-200 font-medium" dir="ltr" lang="de">{phrase}</span>
                 </div>
               ))}
             </div>
@@ -402,7 +404,7 @@ export default function ScenariosPage() {
             onClick={beginChat}
             className="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-semibold transition-colors"
           >
-            Start Conversation
+            {t("startConversation")}
           </button>
         </div>
       </div>
@@ -444,7 +446,7 @@ export default function ScenariosPage() {
             className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded-full shadow-lg hover:bg-emerald-700 active:scale-95 transition-all whitespace-nowrap disabled:opacity-70"
           >
             {vocabSaving ? <Loader2 size={11} className="animate-spin" /> : <BookmarkPlus size={11} />}
-            Save &ldquo;{vocabBtn.text.length > 16 ? vocabBtn.text.slice(0, 16) + "…" : vocabBtn.text}&rdquo;
+            {t("saveSelection", { text: vocabBtn.text.length > 16 ? vocabBtn.text.slice(0, 16) + "…" : vocabBtn.text })}
           </button>
           <div className="flex justify-center -mt-px">
             <div className="w-0 h-0 border-l-[5px] border-r-[5px] border-t-[5px] border-l-transparent border-r-transparent border-t-emerald-600" />
@@ -463,7 +465,7 @@ export default function ScenariosPage() {
       <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-700">
         <div className="flex items-center gap-3">
           <button onClick={goBack} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
-            <ArrowLeft size={18} />
+            <ArrowLeft size={18} className="rtl:-scale-x-100" />
           </button>
           <span className="text-2xl">{selected.avatar_emoji}</span>
           <div>
@@ -475,7 +477,7 @@ export default function ScenariosPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setAutoPlay((v) => !v)}
-            title={autoPlay ? "Auto-play on — each response uses TTS API tokens" : "Auto-play off — click to enable"}
+            title={autoPlay ? t("autoPlayOnTitle") : t("autoPlayOffTitle")}
             className={clsx(
               "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors",
               autoPlay
@@ -484,18 +486,18 @@ export default function ScenariosPage() {
             )}
           >
             <Volume2 size={13} />
-            {autoPlay ? "Auto: ON" : "Auto"}
+            {autoPlay ? t("autoOn") : t("auto")}
           </button>
           <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium px-2 py-1 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
-            Corrections on
+            {t("correctionsOn")}
           </span>
         </div>
       </div>
 
       {/* Goal banner */}
       <div className="px-4 py-2 bg-amber-50 border-b border-amber-100 text-xs text-amber-800 dark:bg-amber-900/20 dark:border-amber-900/40 dark:text-amber-300">
-        <span className="font-semibold">Goal:</span> {selected.goal}
-        <span className="ml-3 text-amber-600 italic">Highlight German words to save to vocabulary</span>
+        <span className="font-semibold">{t("goalLabel")}</span> {selected.goal}
+        <span className="ms-3 text-amber-600 italic">{t("highlightHint")}</span>
       </div>
 
 
@@ -516,11 +518,11 @@ export default function ScenariosPage() {
               <div className={clsx(
                 "max-w-sm rounded-2xl px-4 py-3 text-sm space-y-2",
                 msg.role === "user"
-                  ? "bg-brand-600 text-white rounded-br-sm"
-                  : "bg-white border border-slate-200 text-slate-800 rounded-bl-sm shadow-sm dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
+                  ? "bg-brand-600 text-white rounded-ee-sm"
+                  : "bg-white border border-slate-200 text-slate-800 rounded-es-sm shadow-sm dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
               )}>
                 <div className="flex items-start gap-2">
-                  <p className={clsx("whitespace-pre-wrap flex-1", msg.role === "agent" && "agent-text select-text")}>
+                  <p dir="auto" className={clsx("whitespace-pre-wrap flex-1", msg.role === "agent" && "agent-text select-text")}>
                     {msg.text}
                   </p>
                   {msg.role === "agent" && (
@@ -546,10 +548,10 @@ export default function ScenariosPage() {
                 {msg.role === "agent" && msg.response_translations && Object.keys(msg.response_translations).length > 0 && (
                   <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-1">
                     {langs.map((lang) => {
-                      const t = msg.response_translations?.[lang.code];
-                      return t ? (
+                      const tr = msg.response_translations?.[lang.code];
+                      return tr ? (
                         <p key={lang.code} className="text-xs text-slate-400 dark:text-slate-500" dir={lang.rtl ? "rtl" : "ltr"}>
-                          <span className="font-medium text-slate-500 dark:text-slate-400">{lang.nativeName}:</span> {t}
+                          <span className="font-medium text-slate-500 dark:text-slate-400">{lang.nativeName}:</span> {tr}
                         </p>
                       ) : null;
                     })}
@@ -558,8 +560,8 @@ export default function ScenariosPage() {
 
                 {msg.correction && (
                   <div className="pt-2 border-t border-red-100 dark:border-red-900/40">
-                    <p className="text-xs font-semibold text-red-500">Correction:</p>
-                    <p className="text-xs text-red-600 italic">{msg.correction}</p>
+                    <p className="text-xs font-semibold text-red-500">{t("correction")}</p>
+                    <p className="text-xs text-red-600 italic" dir="ltr" lang="de">{msg.correction}</p>
                     {msg.correction_explanations && langs.map((lang) => {
                       const exp = msg.correction_explanations?.[lang.code];
                       return exp ? (
@@ -628,7 +630,8 @@ export default function ScenariosPage() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-            placeholder="Schreib auf Deutsch... (or use mic)"
+            placeholder={t("inputPlaceholder")}
+            dir="auto"
             className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-400 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100 dark:placeholder-slate-500"
           />
           <button

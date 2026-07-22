@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import { BookUpload } from "@/src/components/reader/BookUpload";
 import { TextPanel, TextPanelHandle } from "@/src/components/reader/TextPanel";
@@ -79,6 +80,7 @@ function AnalysisLangToggle({
 }
 
 export default function ReaderPage() {
+  const t = useTranslations("reader");
   const { activeBookId, setActiveBook, activePage, userLevel, translationLanguages } = useAppStore();
   const [books, setBooks] = useState<any[]>([]);
   const [activeBook, setActiveBookData] = useState<any>(null);
@@ -163,12 +165,12 @@ export default function ReaderPage() {
       const msg = e?.message || "";
       setPageAnalysisError(
         msg.includes("API key") || msg.includes("key not set")
-          ? "Gemini API key missing — go to Settings and add your key"
+          ? t("errApiKeyMissing")
           : msg.includes("429") || msg.includes("RESOURCE_EXHAUSTED")
-          ? "Gemini quota hit — wait a minute and try again"
+          ? t("errQuota")
           : msg.includes("404")
-          ? "Backend not found — restart the app (DeutschPath.app)"
-          : `Analysis failed: ${msg.slice(0, 120)}`
+          ? t("errBackendNotFound")
+          : t("errAnalysisFailed", { msg: msg.slice(0, 120) })
       );
     } finally {
       setPageAnalyzing(false);
@@ -227,7 +229,7 @@ export default function ReaderPage() {
 
   const handleDeleteBook = async (e: React.MouseEvent, bookId: string) => {
     e.stopPropagation();
-    if (!confirm("Delete this book? This cannot be undone.")) return;
+    if (!confirm(t("confirmDeleteBook"))) return;
     try {
       await deleteBook(bookId);
       localStorage.removeItem(`dp_ocr_${bookId}`);
@@ -270,9 +272,9 @@ export default function ReaderPage() {
   return (
     <div className="flex h-[calc(100vh-64px)]">
       {/* Book sidebar */}
-      <div className="w-56 border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex flex-col shrink-0">
+      <div className="w-56 border-e border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex flex-col shrink-0">
         <div className="p-3 border-b border-slate-100 dark:border-slate-800">
-          <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">Books</p>
+          <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">{t("books")}</p>
           <div className="space-y-1">
             {books.map((book) => (
               <div
@@ -283,7 +285,7 @@ export default function ReaderPage() {
               >
                 <button
                   onClick={() => { setActiveBook(book.id); setActiveBookData(book); }}
-                  className={`flex-1 min-w-0 text-left px-2.5 py-2 text-sm flex items-start gap-2 ${
+                  className={`flex-1 min-w-0 text-start px-2.5 py-2 text-sm flex items-start gap-2 ${
                     activeBookId === book.id ? "text-brand-700" : "text-slate-700 dark:text-slate-200"
                   }`}
                 >
@@ -296,7 +298,7 @@ export default function ReaderPage() {
                     <div className="flex items-center gap-1 mt-0.5">
                       <LevelBadge level={book.dominant_level || "A1"} />
                       {book.file_type === "image"
-                        ? <span className="text-xs text-slate-400 dark:text-slate-500">photo</span>
+                        ? <span className="text-xs text-slate-400 dark:text-slate-500">{t("photo")}</span>
                         : <span className="text-xs text-slate-400 dark:text-slate-500">{book.total_pages}p</span>
                       }
                     </div>
@@ -304,8 +306,8 @@ export default function ReaderPage() {
                 </button>
                 <button
                   onClick={(e) => handleDeleteBook(e, book.id)}
-                  className="opacity-0 group-hover:opacity-100 p-1.5 mt-1 mr-1 rounded text-slate-300 dark:text-slate-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all shrink-0"
-                  title="Delete"
+                  className="opacity-0 group-hover:opacity-100 p-1.5 mt-1 me-1 rounded text-slate-300 dark:text-slate-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all shrink-0"
+                  title={t("delete")}
                 >
                   <Trash2 size={12} />
                 </button>
@@ -318,11 +320,11 @@ export default function ReaderPage() {
             onClick={() => setShowUpload(true)}
             className="w-full py-1.5 px-2 rounded-lg border border-dashed border-brand-300 dark:border-brand-700 text-brand-600 dark:text-brand-400 text-xs hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-colors"
           >
-            + Upload book or photo
+            {t("uploadBookOrPhoto")}
           </button>
         </div>
         <div className="mt-auto p-3 border-t border-slate-100 dark:border-slate-800">
-          <p className="text-xs text-slate-400 dark:text-slate-500 mb-1">Level</p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mb-1">{t("level")}</p>
           <LevelBadge level={userLevel} size="md" />
         </div>
       </div>
@@ -337,7 +339,7 @@ export default function ReaderPage() {
                   onClick={() => setShowUpload(false)}
                   className="flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 mb-6"
                 >
-                  <ChevronLeft size={14} /> Back to reader
+                  <ChevronLeft size={14} className="rtl:-scale-x-100" /> {t("backToReader")}
                 </button>
               )}
               <BookUpload onUploaded={handleUploaded} />
@@ -357,13 +359,13 @@ export default function ReaderPage() {
                   <div className="flex items-center justify-between px-4 py-2 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shrink-0">
                     <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
                       <Image size={13} className="text-emerald-500" />
-                      Photo
+                      {t("photoLabel")}
                     </div>
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => setImgScale((s) => Math.max(0.3, +(s - 0.2).toFixed(1)))}
                         className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
-                        title="Zoom out"
+                        title={t("zoomOut")}
                       >
                         <ZoomOut size={16} />
                       </button>
@@ -373,7 +375,7 @@ export default function ReaderPage() {
                       <button
                         onClick={() => setImgScale((s) => Math.min(4.0, +(s + 0.2).toFixed(1)))}
                         className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
-                        title="Zoom in"
+                        title={t("zoomIn")}
                       >
                         <ZoomIn size={16} />
                       </button>
@@ -387,10 +389,10 @@ export default function ReaderPage() {
                         onClick={handleAnalyzePage}
                         disabled={pageAnalyzing}
                         className="flex items-center gap-1 px-2 py-1 text-xs text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20 rounded font-medium disabled:opacity-50"
-                        title="Analyze this page with Gemini"
+                        title={t("analyzePageTitle")}
                       >
                         {pageAnalyzing ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                        Analyze
+                        {t("analyze")}
                       </button>
                       <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
                       <button
@@ -398,7 +400,7 @@ export default function ReaderPage() {
                         className="flex items-center gap-1 px-2 py-1 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded"
                       >
                         {showPanel ? <PanelRightClose size={14} /> : <PanelRight size={14} />}
-                        {showPanel ? "Hide" : "Panel"}
+                        {showPanel ? t("hide") : t("panel")}
                       </button>
                     </div>
                   </div>
@@ -421,7 +423,7 @@ export default function ReaderPage() {
                   <div className="border-t border-slate-200 dark:border-slate-700 flex flex-col shrink-0" style={{ maxHeight: "240px" }}>
                     <div className="flex items-center justify-between px-3 py-1.5 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-700 shrink-0">
                       <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">
-                        {imageTextLoading ? "Extracting text…" : "Extracted Text"}
+                        {imageTextLoading ? t("extractingText") : t("extractedText")}
                       </span>
                       {imageTextLoading && <Loader2 size={12} className="animate-spin text-slate-400" />}
                       {pendingText && (
@@ -430,16 +432,17 @@ export default function ReaderPage() {
                           className="flex items-center gap-1 px-2 py-0.5 bg-brand-600 text-white text-xs rounded-full font-medium hover:bg-brand-700 transition-colors"
                         >
                           <Plus size={10} />
-                          Add to queue
+                          {t("addToQueue")}
                         </button>
                       )}
                     </div>
                     <div
                       className="flex-1 overflow-y-auto px-3 py-2 text-sm text-slate-700 dark:text-slate-200 leading-relaxed select-text cursor-text"
+                      dir="auto"
                       onMouseUp={handleTextMouseUp}
                     >
                       {imageText || (!imageTextLoading && (
-                        <span className="text-slate-400 dark:text-slate-500 text-xs">No text extracted.</span>
+                        <span className="text-slate-400 dark:text-slate-500 text-xs">{t("noTextExtracted")}</span>
                       ))}
                     </div>
                   </div>
@@ -457,10 +460,10 @@ export default function ReaderPage() {
                       onClick={handleAnalyzePage}
                       disabled={pageAnalyzing}
                       className="flex items-center gap-1 px-2 py-1 text-xs text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20 rounded font-medium disabled:opacity-50"
-                      title="Analyze this page with Gemini"
+                      title={t("analyzePageTitle")}
                     >
                       {pageAnalyzing ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                      Analyze page
+                      {t("analyzePage")}
                     </button>
                   </div>
                   <div className="flex-1 overflow-hidden">
@@ -485,7 +488,7 @@ export default function ReaderPage() {
                 <div
                   onMouseDown={handleResizeDragStart}
                   className="w-1 shrink-0 bg-slate-200 dark:bg-slate-700 hover:bg-brand-400 dark:hover:bg-brand-500 cursor-col-resize transition-colors"
-                  title="Drag to resize"
+                  title={t("dragToResize")}
                 />
                 <div
                   className="flex flex-col overflow-hidden min-w-0"
@@ -502,7 +505,7 @@ export default function ReaderPage() {
           </div>
         ) : (
           <div className="flex-1 flex items-center justify-center text-slate-400 dark:text-slate-500">
-            Select a book from the sidebar
+            {t("selectBook")}
           </div>
         )}
       </div>
@@ -517,7 +520,7 @@ export default function ReaderPage() {
                 {pageAnalyzing ? (
                   <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
                     <Loader2 size={14} className="animate-spin" />
-                    Reading the page…
+                    {t("readingPage")}
                   </div>
                 ) : pageAnalysisError ? (
                   <p className="text-sm text-red-600 dark:text-red-400">{pageAnalysisError}</p>

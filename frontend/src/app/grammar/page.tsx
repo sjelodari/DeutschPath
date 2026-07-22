@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { LevelBadge } from "@/src/components/layout/LevelBadge";
 import { getGrammarRoadmap, practiceGrammar, generateGrammarExercises, translateGrammarRule, completeGrammarExercise, NetworkError } from "@/src/lib/api";
 import { useAppStore } from "@/src/lib/store";
@@ -12,9 +13,30 @@ import {
 } from "lucide-react";
 import { clsx } from "clsx";
 import { ConfirmLeaveDialog } from "@/src/components/layout/ConfirmLeaveDialog";
+import { slugifyRuleName } from "@/src/lib/locale";
 
 const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
 type LessonTab = "learn" | "exercises" | "chat";
+
+/** Translated label for a grammar rule; falls back to the raw DB name if a
+ *  catalog is missing the key (e.g. a rule added after a catalog was last updated). */
+function ruleDisplayName(t: (key: string) => string, rule: { name: string }): string {
+  try {
+    return t(`ruleName_${slugifyRuleName(rule.name)}`);
+  } catch {
+    return rule.name;
+  }
+}
+
+/** `type` comes from Gemini's free-text exercise-generation output, not a fixed
+ *  enum — fall back to the raw value if it's ever outside the catalog's known keys. */
+function exerciseTypeLabel(t: (key: string) => string, type: string): string {
+  try {
+    return t(`exType_${type}`);
+  } catch {
+    return type.replace(/_/g, " ");
+  }
+}
 
 interface Exercise {
   type: "fill_blank" | "multiple_choice" | "translate" | "correct_error";
@@ -30,12 +52,6 @@ interface Exercise {
 
 interface ExResult { userAnswer: string; correct: boolean }
 
-const EX_TYPE_LABEL: Record<string, string> = {
-  fill_blank: "Fill in the blank",
-  multiple_choice: "Multiple choice",
-  translate: "Translate to German",
-  correct_error: "Correct the error",
-};
 const EX_TYPE_COLOR: Record<string, string> = {
   fill_blank: "bg-blue-100 text-blue-700 border-blue-200",
   multiple_choice: "bg-violet-100 text-violet-700 border-violet-200",
@@ -222,7 +238,7 @@ function ExampleCard({ de, en, secondary, rtl }: { de: string; en: string; secon
     <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
       {sentences.map((s, i) => (
         <div key={i} className={clsx("px-4 py-2.5", i > 0 && "border-t border-slate-100 dark:border-slate-800")}>
-          <p className="font-semibold text-slate-800 dark:text-slate-100 text-sm">{s.endsWith(".") ? s : `${s}.`}</p>
+          <p className="font-semibold text-slate-800 dark:text-slate-100 text-sm" dir="ltr" lang="de">{s.endsWith(".") ? s : `${s}.`}</p>
           {enSentences[i] && (
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{enSentences[i]}</p>
           )}
@@ -246,6 +262,7 @@ function ExampleCard({ de, en, secondary, rtl }: { de: string; en: string; secon
 function LearnTab({
   rule, secondLang, onStartExercises,
 }: { rule: any; secondLang: Language; onStartExercises: () => void }) {
+  const t = useTranslations("grammar");
   const [secondaryText, setSecondaryText] = useState<string | null>(null);
   const [translatedExample, setTranslatedExample] = useState<string>("");
   const [translating, setTranslating] = useState(false);
@@ -265,8 +282,8 @@ function LearnTab({
     <div className="flex-1 overflow-y-auto p-6 space-y-6">
       {/* Pattern */}
       <div>
-        <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">Pattern</p>
-        <div className="bg-slate-900 text-emerald-400 font-mono text-sm px-4 py-3 rounded-xl leading-relaxed">
+        <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">{t("pattern")}</p>
+        <div className="bg-slate-900 text-emerald-400 font-mono text-sm px-4 py-3 rounded-xl leading-relaxed" dir="ltr" lang="de">
           {rule.pattern}
         </div>
       </div>
@@ -275,19 +292,19 @@ function LearnTab({
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/40">
           <p className="text-xs font-bold text-blue-600 dark:text-blue-300 uppercase tracking-wide mb-2 flex items-center gap-1">
-            <span>🇬🇧</span> English
+            <span>🇬🇧</span> {t("english")}
           </p>
           <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">{rule.english_explanation}</p>
         </div>
         <div className="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-900/40">
           <p className="text-xs font-bold text-indigo-600 dark:text-indigo-300 uppercase tracking-wide mb-2">
             {secondLang.nativeName}
-            <span className="font-normal text-indigo-400 dark:text-indigo-500 ml-1">({secondLang.name})</span>
+            <span className="font-normal text-indigo-400 dark:text-indigo-500 ms-1">({secondLang.name})</span>
           </p>
           {translating ? (
             <div className="flex items-center gap-2 text-xs text-indigo-400 dark:text-indigo-500">
               <div className="w-3 h-3 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
-              Translating…
+              {t("translating")}
             </div>
           ) : (
             <p
@@ -304,7 +321,7 @@ function LearnTab({
       {/* Examples */}
       {rule.example_de && (
         <div>
-          <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">Examples</p>
+          <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">{t("examples")}</p>
           <ExampleCard
             de={rule.example_de}
             en={rule.example_en || ""}
@@ -317,7 +334,7 @@ function LearnTab({
       {/* Prerequisites */}
       {rule.prerequisites?.length > 0 && (
         <div>
-          <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">Prerequisites</p>
+          <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">{t("prerequisites")}</p>
           <div className="flex flex-wrap gap-2">
             {rule.prerequisites.map((p: string) => (
               <span key={p} className="text-xs px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
@@ -335,8 +352,8 @@ function LearnTab({
           className="w-full flex items-center justify-center gap-2 py-3 bg-brand-600 text-white rounded-xl font-medium hover:bg-brand-700 transition-colors"
         >
           <Dumbbell size={16} />
-          Start Exercises
-          <ArrowRight size={16} />
+          {t("startExercises")}
+          <ArrowRight size={16} className="rtl:-scale-x-100" />
         </button>
       </div>
     </div>
@@ -354,6 +371,7 @@ function ExercisesTab({
   onRuleMastered: () => void;
   onNextRule: (() => void) | null;
 }) {
+  const t = useTranslations("grammar");
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -457,7 +475,7 @@ function ExercisesTab({
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-3 text-slate-400 dark:text-slate-500">
         <div className="w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm">Generating exercises…</p>
+        <p className="text-sm">{t("generatingExercises")}</p>
       </div>
     );
   }
@@ -465,12 +483,12 @@ function ExercisesTab({
   if (!exercises.length) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6">
-        <p className="text-slate-500 dark:text-slate-400 text-sm">Could not load exercises.</p>
+        <p className="text-slate-500 dark:text-slate-400 text-sm">{t("couldNotLoad")}</p>
         <button
           onClick={reloadExercises}
           className="flex items-center gap-2 px-4 py-2 bg-brand-600 text-white rounded-xl text-sm font-medium hover:bg-brand-700"
         >
-          <RotateCcw size={14} /> Try again
+          <RotateCcw size={14} /> {t("tryAgain")}
         </button>
       </div>
     );
@@ -505,11 +523,11 @@ function ExercisesTab({
                 "font-bold text-base",
                 alreadyHad && !passedNow ? "text-blue-700 dark:text-blue-300" : "text-green-700 dark:text-green-300"
               )}>
-                {alreadyHad && !passedNow ? "Already Mastered ✓" : "Rule Mastered! 🎉"}
+                {alreadyHad && !passedNow ? t("alreadyMastered") : t("ruleMastered")}
               </p>
               <p className="text-sm text-slate-600 dark:text-slate-300 mt-0.5">
-                {score}/{exercises.length} correct ({pct}%)
-                {alreadyHad && !passedNow && " — this rule was already marked as passed"}
+                {t("scoreLine", { score, total: exercises.length, pct })}
+                {alreadyHad && !passedNow && ` ${t("alreadyPassedNote")}`}
               </p>
             </div>
           </div>
@@ -519,9 +537,9 @@ function ExercisesTab({
               <RotateCcw size={22} className="text-amber-600 dark:text-amber-400" />
             </div>
             <div>
-              <p className="font-bold text-base text-amber-700 dark:text-amber-300">Not quite — keep practising!</p>
+              <p className="font-bold text-base text-amber-700 dark:text-amber-300">{t("keepPractising")}</p>
               <p className="text-sm text-slate-600 dark:text-slate-300 mt-0.5">
-                {score}/{exercises.length} correct ({pct}%) — need {Math.round(PASS_THRESHOLD * 100)}% to pass
+                {t("scoreLineNeed", { score, total: exercises.length, pct, need: Math.round(PASS_THRESHOLD * 100) })}
               </p>
             </div>
           </div>
@@ -530,7 +548,7 @@ function ExercisesTab({
         {/* ── Per-question results ── */}
         <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
           <div className="px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Question breakdown</p>
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{t("questionBreakdown")}</p>
           </div>
           {exercises.map((exItem, i) => {
             const res = results[i];
@@ -556,19 +574,19 @@ function ExercisesTab({
                       "text-xs font-medium px-2 py-0.5 rounded-full border",
                       EX_TYPE_COLOR[exItem.type]
                     )}>
-                      {EX_TYPE_LABEL[exItem.type]}
+                      {exerciseTypeLabel(t, exItem.type)}
                     </span>
-                    <span className="text-xs text-slate-400 dark:text-slate-500">Q{i + 1}</span>
+                    <span className="text-xs text-slate-400 dark:text-slate-500">{t("questionN", { n: i + 1 })}</span>
                   </div>
                   {!res?.correct && (
                     <div className="mt-1.5 space-y-0.5 text-xs">
                       <p className="text-slate-500 dark:text-slate-400">
-                        <span className="text-red-500">✗ Yours:</span>{" "}
-                        <span className="font-mono">{res?.userAnswer || "—"}</span>
+                        <span className="text-red-500">{t("yoursLabel")}</span>{" "}
+                        <span className="font-mono" dir="ltr" lang="de">{res?.userAnswer || "—"}</span>
                       </p>
                       <p className="text-slate-500 dark:text-slate-400">
-                        <span className="text-green-600">✓ Answer:</span>{" "}
-                        <span className="font-mono font-medium text-slate-700 dark:text-slate-200">{exItem.answer}</span>
+                        <span className="text-green-600">{t("answerLabel")}</span>{" "}
+                        <span className="font-mono font-medium text-slate-700 dark:text-slate-200" dir="ltr" lang="de">{exItem.answer}</span>
                       </p>
                     </div>
                   )}
@@ -585,7 +603,7 @@ function ExercisesTab({
               onClick={onNextRule}
               className="flex items-center justify-center gap-2 w-full py-2.5 bg-brand-600 text-white rounded-xl text-sm font-medium hover:bg-brand-700 transition-colors"
             >
-              Next Rule <ArrowRight size={14} />
+              {t("nextRule")} <ArrowRight size={14} className="rtl:-scale-x-100" />
             </button>
           )}
           <button
@@ -598,7 +616,7 @@ function ExercisesTab({
             )}
           >
             <RotateCcw size={14} />
-            {showAsPassed ? "Practice Again" : "Try Again"}
+            {showAsPassed ? t("practiceAgain") : t("tryAgainCap")}
           </button>
         </div>
       </div>
@@ -612,8 +630,8 @@ function ExercisesTab({
       {/* Progress bar */}
       <div className="px-6 pt-5 pb-3 shrink-0">
         <div className="flex items-center justify-between mb-1.5">
-          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Exercise {currentIdx + 1} of {exercises.length}</p>
-          <p className="text-xs text-slate-400 dark:text-slate-500">{score} correct so far</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{t("exerciseProgress", { current: currentIdx + 1, total: exercises.length })}</p>
+          <p className="text-xs text-slate-400 dark:text-slate-500">{t("correctSoFar", { count: score })}</p>
         </div>
         <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full">
           <div
@@ -628,7 +646,7 @@ function ExercisesTab({
         {/* Type badge + instruction */}
         <div className="flex items-center gap-2">
           <span className={clsx("text-xs font-semibold px-2.5 py-1 rounded-full border", EX_TYPE_COLOR[ex.type])}>
-            {EX_TYPE_LABEL[ex.type]}
+            {exerciseTypeLabel(t, ex.type)}
           </span>
         </div>
         <p className="text-sm text-slate-500 dark:text-slate-400">{ex.instruction}</p>
@@ -637,12 +655,12 @@ function ExercisesTab({
         <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl">
           {ex.type === "translate" ? (
             <div>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mb-1">Translate into German:</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mb-1">{t("translateIntoGerman")}</p>
               <p className="text-base font-semibold text-slate-800 dark:text-slate-100">{ex.prompt_en}</p>
             </div>
           ) : ex.type === "fill_blank" ? (
             <div>
-              <p className="text-base font-semibold text-slate-800 dark:text-slate-100">
+              <p className="text-base font-semibold text-slate-800 dark:text-slate-100" dir="ltr" lang="de">
                 <FillBlankText text={ex.prompt_de || ""} />
               </p>
               {ex.prompt_en && <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">({ex.prompt_en})</p>}
@@ -650,9 +668,9 @@ function ExercisesTab({
           ) : (
             <div>
               {ex.type === "correct_error" && (
-                <p className="text-xs text-rose-500 mb-1">⚠ This sentence has a grammatical error:</p>
+                <p className="text-xs text-rose-500 mb-1">{t("hasError")}</p>
               )}
-              <p className="text-base font-semibold text-slate-800 dark:text-slate-100">{ex.prompt_de}</p>
+              <p className="text-base font-semibold text-slate-800 dark:text-slate-100" dir="ltr" lang="de">{ex.prompt_de}</p>
               {ex.prompt_en && <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">({ex.prompt_en})</p>}
             </div>
           )}
@@ -671,7 +689,7 @@ function ExercisesTab({
                 onClick={() => setShowHint(true)}
                 className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 hover:text-amber-600 transition-colors"
               >
-                <Lightbulb size={13} /> Show hint
+                <Lightbulb size={13} /> {t("showHint")}
               </button>
             )}
           </div>
@@ -687,7 +705,7 @@ function ExercisesTab({
                     key={opt}
                     onClick={() => setSelectedOption(opt)}
                     className={clsx(
-                      "px-4 py-3 rounded-xl border text-sm font-medium text-left transition-all",
+                      "px-4 py-3 rounded-xl border text-sm font-medium text-start transition-all",
                       selectedOption === opt
                         ? "border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-900/20 dark:text-brand-300"
                         : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-700"
@@ -703,8 +721,10 @@ function ExercisesTab({
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSubmit())}
-                  placeholder={ex.type === "correct_error" ? "Write the corrected sentence…" : "Type your answer in German…"}
+                  placeholder={ex.type === "correct_error" ? t("phCorrectSentence") : t("phTypeAnswer")}
                   rows={2}
+                  dir="ltr"
+                  lang="de"
                   className="flex-1 px-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm resize-none focus:outline-none focus:border-brand-400 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500"
                 />
               </div>
@@ -715,7 +735,7 @@ function ExercisesTab({
               disabled={ex.type === "multiple_choice" ? !selectedOption : !input.trim()}
               className="w-full py-2.5 bg-brand-600 text-white rounded-xl text-sm font-medium hover:bg-brand-700 disabled:opacity-40 transition-colors"
             >
-              Submit Answer
+              {t("submitAnswer")}
             </button>
           </>
         )}
@@ -734,14 +754,14 @@ function ExercisesTab({
                 : <XCircle size={18} className="text-red-500 shrink-0" />
               }
               <p className={clsx("font-semibold text-sm", result.correct ? "text-green-700" : "text-red-600")}>
-                {result.correct ? "Correct!" : "Not quite."}
+                {result.correct ? t("correct") : t("notQuite")}
               </p>
             </div>
 
             {!result.correct && (
               <div className="text-sm">
-                <span className="text-slate-500 dark:text-slate-400 text-xs">Correct answer: </span>
-                <span className="font-semibold text-slate-800 dark:text-slate-100">{ex.answer}</span>
+                <span className="text-slate-500 dark:text-slate-400 text-xs">{t("correctAnswer")} </span>
+                <span className="font-semibold text-slate-800 dark:text-slate-100" dir="ltr" lang="de">{ex.answer}</span>
               </div>
             )}
 
@@ -765,9 +785,9 @@ function ExercisesTab({
             className="w-full flex items-center justify-center gap-2 py-2.5 bg-brand-600 text-white rounded-xl text-sm font-medium hover:bg-brand-700 transition-colors"
           >
             {currentIdx < exercises.length - 1 ? (
-              <><ArrowRight size={14} /> Next Exercise</>
+              <><ArrowRight size={14} className="rtl:-scale-x-100" /> {t("nextExercise")}</>
             ) : (
-              <><CheckCircle2 size={14} /> See Results</>
+              <><CheckCircle2 size={14} /> {t("seeResults")}</>
             )}
           </button>
         )}
@@ -778,15 +798,18 @@ function ExercisesTab({
 
 // ── Chat tab ──────────────────────────────────────────────────────────────
 
+// Quick-action prompts stay in English — they are instructions sent to the AI
+// tutor; the tutor's reply language is controlled by the EN/secondary toggle.
 const QUICK_ACTIONS = [
-  { label: "Teach me this rule 📖", msg: "Please teach me this grammar rule from the beginning with clear examples." },
-  { label: "Give me an exercise 🎯", msg: "Please give me a practice exercise for this rule." },
-  { label: "Explain with example 💡", msg: "Can you explain this rule with a clear example?" },
-  { label: "Make it harder ⚡", msg: "Give me a harder exercise using this grammar rule." },
-  { label: "Common mistakes ⚠️", msg: "What are common mistakes students make with this rule?" },
+  { key: "teach",    msg: "Please teach me this grammar rule from the beginning with clear examples." },
+  { key: "exercise", msg: "Please give me a practice exercise for this rule." },
+  { key: "example",  msg: "Can you explain this rule with a clear example?" },
+  { key: "harder",   msg: "Give me a harder exercise using this grammar rule." },
+  { key: "mistakes", msg: "What are common mistakes students make with this rule?" },
 ];
 
 function ChatTab({ rule, userLevel, secondLang }: { rule: any; userLevel: string; secondLang: Language }) {
+  const t = useTranslations("grammar");
   const { setHasPendingChat } = useAppStore();
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState("");
@@ -823,8 +846,8 @@ function ChatTab({ rule, userLevel, secondLang }: { rule: any; userLevel: string
       setMessages((m) => [...m, { role: "tutor", ...res, _teachingInSecondary: teachingInSecondary, _secondaryRtl: secondLang.rtl }]);
     } catch (err) {
       const msg = err instanceof NetworkError
-        ? "⚡ Connection issue — please try again when you're back online."
-        : "Something went wrong on the AI side — please try again.";
+        ? t("errOffline")
+        : t("errAi");
       setMessages((m) => [...m, { role: "tutor", tutor_response_de: msg }]);
     } finally {
       setSending(false);
@@ -839,7 +862,7 @@ function ChatTab({ rule, userLevel, secondLang }: { rule: any; userLevel: string
       {!hasMessages && (
         <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
           <div className="flex items-center justify-between mb-2.5">
-            <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">Quick start:</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">{t("quickStart")}</p>
             {hasSecondary && (
               <div className="flex items-center gap-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-0.5">
                 <button
@@ -868,13 +891,13 @@ function ChatTab({ rule, userLevel, secondLang }: { rule: any; userLevel: string
             )}
           </div>
           <div className="flex flex-wrap gap-2">
-            {QUICK_ACTIONS.map(({ label, msg }) => (
+            {QUICK_ACTIONS.map(({ key, msg }) => (
               <button
-                key={label}
+                key={key}
                 onClick={() => send(msg)}
                 className="text-xs px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:border-brand-400 hover:text-brand-700 hover:bg-brand-50 transition-colors"
               >
-                {label}
+                {t(`quickAction_${key}`)}
               </button>
             ))}
           </div>
@@ -886,15 +909,17 @@ function ChatTab({ rule, userLevel, secondLang }: { rule: any; userLevel: string
         {!hasMessages && (
           <div className="text-center text-slate-400 dark:text-slate-500 text-sm mt-8">
             <Sparkles size={28} className="mx-auto mb-2 opacity-40" />
-            <p>Chat with your AI tutor about <strong className="text-slate-600 dark:text-slate-300">{rule.name}</strong></p>
-            <p className="text-xs mt-1">Ask a question or use a quick start above</p>
+            <p>{t.rich("chatEmpty", {
+              rule: () => <strong className="text-slate-600 dark:text-slate-300">{ruleDisplayName(t, rule)}</strong>,
+            })}</p>
+            <p className="text-xs mt-1">{t("chatEmptyHint")}</p>
           </div>
         )}
 
         {messages.map((msg, i) => (
           <div key={i} className={clsx("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
             {msg.role === "tutor" && (
-              <div className="w-7 h-7 rounded-full bg-brand-600 flex items-center justify-center text-white text-xs font-bold mr-2 mt-1 shrink-0">
+              <div className="w-7 h-7 rounded-full bg-brand-600 flex items-center justify-center text-white text-xs font-bold me-2 mt-1 shrink-0">
                 T
               </div>
             )}
@@ -910,8 +935,8 @@ function ChatTab({ rule, userLevel, secondLang }: { rule: any; userLevel: string
                   <div className={clsx(
                     "rounded-2xl px-4 py-3 text-sm",
                     msg.role === "user"
-                      ? "bg-brand-600 text-white rounded-br-sm"
-                      : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 rounded-bl-sm shadow-sm"
+                      ? "bg-brand-600 text-white rounded-ee-sm"
+                      : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 rounded-es-sm shadow-sm"
                   )}>
                     {msg.role === "user"
                       ? <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
@@ -925,9 +950,9 @@ function ChatTab({ rule, userLevel, secondLang }: { rule: any; userLevel: string
               {msg.correction && (
                 <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/40 rounded-xl px-4 py-3 space-y-1.5">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-red-600">
-                    <XCircle size={13} /> Correction
+                    <XCircle size={13} /> {t("correction")}
                   </div>
-                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 font-mono">{msg.correction}</p>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 font-mono" dir="ltr" lang="de">{msg.correction}</p>
                   {msg.what_was_wrong && (
                     <p
                       className="text-xs text-slate-600 dark:text-slate-300"
@@ -951,7 +976,7 @@ function ChatTab({ rule, userLevel, secondLang }: { rule: any; userLevel: string
               {msg.exercise && (
                 <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-900/40 rounded-xl px-4 py-3 space-y-1">
                   <p className="text-xs font-bold text-indigo-600 dark:text-indigo-300 flex items-center gap-1">
-                    <Dumbbell size={12} /> Exercise
+                    <Dumbbell size={12} /> {t("exercise")}
                   </p>
                   <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{msg.exercise}</p>
                 </div>
@@ -963,7 +988,7 @@ function ChatTab({ rule, userLevel, secondLang }: { rule: any; userLevel: string
         {sending && (
           <div className="flex justify-start gap-2">
             <div className="w-7 h-7 rounded-full bg-brand-600 flex items-center justify-center text-white text-xs font-bold shrink-0">T</div>
-            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
+            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl rounded-es-sm px-4 py-3 shadow-sm">
               <div className="flex gap-1.5">
                 {[0, 150, 300].map((d) => (
                   <span key={d} className="w-2 h-2 bg-slate-400 dark:bg-slate-500 rounded-full animate-bounce" style={{ animationDelay: `${d}ms` }} />
@@ -988,7 +1013,7 @@ function ChatTab({ rule, userLevel, secondLang }: { rule: any; userLevel: string
                     ? "bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm"
                     : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
                 )}
-                title="Tutor responds in English"
+                title={t("tutorRespondsEn")}
               >
                 EN
               </button>
@@ -1000,7 +1025,7 @@ function ChatTab({ rule, userLevel, secondLang }: { rule: any; userLevel: string
                     ? "bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm"
                     : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
                 )}
-                title={`Tutor responds in ${secondLang.name}`}
+                title={t("tutorRespondsIn", { lang: secondLang.name })}
               >
                 {secondLang.code.toUpperCase()}
               </button>
@@ -1011,7 +1036,8 @@ function ChatTab({ rule, userLevel, secondLang }: { rule: any; userLevel: string
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && send(input)}
-            placeholder="Schreib auf Deutsch oder frag auf Englisch…"
+            placeholder={t("chatPlaceholder")}
+            dir="auto"
             className="flex-1 px-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:border-brand-400 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500"
           />
           <button
@@ -1034,28 +1060,29 @@ function LessonPanel({ rule, onClose, userLevel, secondLang, onRuleMastered, onN
   onRuleMastered: () => void;
   onNextRule: (() => void) | null;
 }) {
+  const t = useTranslations("grammar");
   const [tab, setTab] = useState<LessonTab>("learn");
 
   // Reset to learn when rule changes
   useEffect(() => { setTab("learn"); }, [rule.id]);
 
   const tabs: { id: LessonTab; label: string; icon: React.ReactNode }[] = [
-    { id: "learn",     label: "Lesson",    icon: <BookOpen size={14} /> },
-    { id: "exercises", label: "Exercises", icon: <Dumbbell size={14} /> },
-    { id: "chat",      label: "Chat",      icon: <MessageSquare size={14} /> },
+    { id: "learn",     label: t("tabLesson"),    icon: <BookOpen size={14} /> },
+    { id: "exercises", label: t("tabExercises"), icon: <Dumbbell size={14} /> },
+    { id: "chat",      label: t("tabChat"),      icon: <MessageSquare size={14} /> },
   ];
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden border-l border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+    <div className="flex-1 flex flex-col overflow-hidden border-s border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
       {/* Header */}
       <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-indigo-50 to-white dark:from-indigo-900/20 dark:to-slate-900 shrink-0">
         <div className="flex items-start justify-between">
           <div className="min-w-0">
-            <h2 className="font-bold text-slate-900 dark:text-slate-50 text-base leading-tight">{rule.name}</h2>
+            <h2 className="font-bold text-slate-900 dark:text-slate-50 text-base leading-tight">{ruleDisplayName(t, rule)}</h2>
             <div className="flex items-center gap-2 mt-1">
               <LevelBadge level={rule.cefr_level} />
               {rule.pattern && (
-                <code className="text-xs bg-indigo-100 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded truncate max-w-xs">
+                <code className="text-xs bg-indigo-100 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded truncate max-w-xs" dir="ltr" lang="de">
                   {rule.pattern}
                 </code>
               )}
@@ -1063,7 +1090,7 @@ function LessonPanel({ rule, onClose, userLevel, secondLang, onRuleMastered, onN
           </div>
           <button
             onClick={onClose}
-            className="ml-4 p-1.5 text-slate-400 dark:text-slate-500 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors shrink-0"
+            className="ms-4 p-1.5 text-slate-400 dark:text-slate-500 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors shrink-0"
           >
             <X size={16} />
           </button>
@@ -1111,6 +1138,7 @@ function LessonPanel({ rule, onClose, userLevel, secondLang, onRuleMastered, onN
 const ENGLISH_LANG: Language = { code: "en", name: "English", nativeName: "English", rtl: false };
 
 export default function GrammarPage() {
+  const t = useTranslations("grammar");
   const { userLevel, translationLanguages, hasPendingChat, setHasPendingChat } = useAppStore();
   const secondLang: Language =
     translationLanguages.find((l) => l.code !== "en") ?? ENGLISH_LANG;
@@ -1191,15 +1219,15 @@ export default function GrammarPage() {
       )}
       {/* ── Roadmap sidebar ── */}
       <div className={clsx(
-        "flex flex-col overflow-y-auto bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all shrink-0",
-        selectedRule ? "w-72" : "w-full max-w-2xl mx-auto border-r-0"
+        "flex flex-col overflow-y-auto bg-white dark:bg-slate-900 border-e border-slate-200 dark:border-slate-800 transition-all shrink-0",
+        selectedRule ? "w-72" : "w-full max-w-2xl mx-auto border-e-0"
       )}>
         <div className="p-5">
           {!selectedRule && (
             <div className="mb-6">
-              <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Grammar Roadmap</h1>
+              <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{t("title")}</h1>
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                Select a rule to study the lesson, do exercises, and chat with your tutor.
+                {t("subtitle")}
               </p>
             </div>
           )}
@@ -1257,9 +1285,9 @@ export default function GrammarPage() {
                             key={rule.id}
                             onClick={() => guardedAction(() => setSelectedRule(isSelected ? null : rule))}
                             className={clsx(
-                              "w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors border-b border-slate-50 dark:border-slate-900 last:border-0",
+                              "w-full flex items-center gap-3 px-4 py-2.5 text-start transition-colors border-b border-slate-50 dark:border-slate-900 last:border-0",
                               isSelected
-                                ? "bg-brand-50 dark:bg-brand-900/20 border-l-2 border-l-brand-500"
+                                ? "bg-brand-50 dark:bg-brand-900/20 border-s-2 border-s-brand-500"
                                 : "hover:bg-slate-50 dark:hover:bg-slate-800"
                             )}
                           >
@@ -1272,13 +1300,13 @@ export default function GrammarPage() {
                                 "text-sm font-medium truncate",
                                 isSelected ? "text-brand-700" : "text-slate-700 dark:text-slate-200"
                               )}>
-                                {rule.name}
+                                {ruleDisplayName(t, rule)}
                               </p>
                               {!selectedRule && rule.pattern && (
-                                <p className="text-xs text-slate-400 dark:text-slate-500 truncate font-mono mt-0.5">{rule.pattern}</p>
+                                <p className="text-xs text-slate-400 dark:text-slate-500 truncate font-mono mt-0.5" dir="ltr" lang="de">{rule.pattern}</p>
                               )}
                             </div>
-                            <ChevronRight size={13} className={clsx("shrink-0", isSelected ? "text-brand-500" : "text-slate-300 dark:text-slate-600")} />
+                            <ChevronRight size={13} className={clsx("shrink-0 rtl:-scale-x-100", isSelected ? "text-brand-500" : "text-slate-300 dark:text-slate-600")} />
                           </button>
                         );
                       })}

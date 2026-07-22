@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { Upload, Image } from "lucide-react";
 import { uploadBook } from "@/src/lib/api";
 
@@ -12,6 +13,7 @@ const ACCEPTED_EXTS = [".pdf", ".jpg", ".jpeg", ".png", ".webp"];
 const IMAGE_EXTS = new Set([".jpg", ".jpeg", ".png", ".webp"]);
 
 export function BookUpload({ onUploaded }: Props) {
+  const t = useTranslations("bookUpload");
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
@@ -20,7 +22,7 @@ export function BookUpload({ onUploaded }: Props) {
   const handleFile = async (file: File) => {
     const ext = "." + file.name.split(".").pop()!.toLowerCase();
     if (!ACCEPTED_EXTS.includes(ext)) {
-      setError("Supported formats: PDF, JPG, PNG, WEBP");
+      setError(t("supportedFormats"));
       return;
     }
     setError("");
@@ -30,7 +32,7 @@ export function BookUpload({ onUploaded }: Props) {
       const result = await uploadBook(file, title);
       onUploaded(result.book);
     } catch (e: any) {
-      setError("Upload failed: " + e.message);
+      setError(t("uploadFailed", { msg: e.message }));
     } finally {
       setUploading(false);
     }
@@ -62,7 +64,7 @@ export function BookUpload({ onUploaded }: Props) {
         {uploading ? (
           <>
             <div className="w-12 h-12 border-4 border-brand-600 border-t-transparent rounded-full animate-spin" />
-            <p className="text-slate-600">Uploading and processing...</p>
+            <p className="text-slate-600">{t("uploading")}</p>
           </>
         ) : (
           <>
@@ -75,11 +77,11 @@ export function BookUpload({ onUploaded }: Props) {
               </div>
             </div>
             <div>
-              <p className="text-lg font-semibold text-slate-700">Upload German text</p>
-              <p className="text-sm text-slate-500 mt-1">Drag & drop or click — PDF or photo (JPG, PNG, WEBP)</p>
+              <p className="text-lg font-semibold text-slate-700">{t("heading")}</p>
+              <p className="text-sm text-slate-500 mt-1">{t("dragDrop")}</p>
             </div>
             <p className="text-xs text-slate-400">
-              Highlight any word or phrase to get explanations and save to your vocabulary
+              {t("highlightHint")}
             </p>
           </>
         )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { Volume2, ChevronLeft, ChevronRight, Minus } from "lucide-react";
 import { LevelBadge } from "@/src/components/layout/LevelBadge";
 import { clsx } from "clsx";
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export function FlashCard({ word, onRate }: Props) {
+  const t = useTranslations("flashcard");
   const { translationLanguages } = useAppStore();
   const langs = translationLanguages.length > 0
     ? translationLanguages
@@ -63,7 +65,7 @@ export function FlashCard({ word, onRate }: Props) {
               )}
             </div>
             <h2 className="text-4xl font-bold tracking-tight text-center">
-              {word.gender && <span className="text-2xl text-white/70 mr-2">{word.gender}</span>}
+              {word.gender && <span className="text-2xl text-white/70 me-2">{word.gender}</span>}
               {word.german}
             </h2>
             <button
@@ -72,7 +74,7 @@ export function FlashCard({ word, onRate }: Props) {
             >
               <Volume2 size={18} />
             </button>
-            <p className="text-white/50 text-sm mt-2">Tap to reveal</p>
+            <p className="text-white/50 text-sm mt-2">{t("tapToReveal")}</p>
           </div>
         ) : (
           /* Back */
@@ -80,7 +82,7 @@ export function FlashCard({ word, onRate }: Props) {
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-2xl font-bold text-slate-800 dark:text-slate-100">
-                  {word.gender && <span className="text-slate-400 dark:text-slate-500 mr-1">{word.gender}</span>}
+                  {word.gender && <span className="text-slate-400 dark:text-slate-500 me-1">{word.gender}</span>}
                   {word.german}
                 </span>
                 <button
@@ -105,8 +107,8 @@ export function FlashCard({ word, onRate }: Props) {
 
             <div className="space-y-1">
               {langs.map((lang) => {
-                const t = getTranslation(word, lang.code);
-                return t ? (
+                const tr = getTranslation(word, lang.code);
+                return tr ? (
                   <div key={lang.code} className="flex gap-3">
                     <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 w-6 mt-0.5 uppercase shrink-0">
                       {lang.code}
@@ -115,7 +117,7 @@ export function FlashCard({ word, onRate }: Props) {
                       className="text-slate-700 dark:text-slate-200 font-medium flex-1"
                       dir={lang.rtl ? "rtl" : "ltr"}
                     >
-                      {t}
+                      {tr}
                     </p>
                   </div>
                 ) : null;
@@ -124,7 +126,7 @@ export function FlashCard({ word, onRate }: Props) {
 
             {word.example_de && (
               <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-3 space-y-1">
-                <p className="text-sm text-slate-700 dark:text-slate-200 italic">{word.example_de}</p>
+                <p className="text-sm text-slate-700 dark:text-slate-200 italic" dir="ltr" lang="de">{word.example_de}</p>
                 {langs.map((lang) => {
                   const ex = getExampleTranslation(word, lang.code);
                   return ex ? (
@@ -142,7 +144,7 @@ export function FlashCard({ word, onRate }: Props) {
       {/* Action buttons — shown after flip */}
       {flipped && (
         <div className="w-full max-w-lg space-y-3">
-          <p className="text-xs text-center text-slate-400 dark:text-slate-500">How did it go?</p>
+          <p className="text-xs text-center text-slate-400 dark:text-slate-500">{t("howDidItGo")}</p>
           <div className="grid grid-cols-3 gap-3">
 
             <button
@@ -150,8 +152,8 @@ export function FlashCard({ word, onRate }: Props) {
               className="flex flex-col items-center gap-1.5 py-4 rounded-2xl bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 border-2 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 transition-all active:scale-95"
             >
               <ChevronLeft size={24} />
-              <span className="text-sm font-bold">Again</span>
-              <span className="text-[10px] opacity-50">← key</span>
+              <span className="text-sm font-bold">{t("again")}</span>
+              <span className="text-[10px] opacity-50">{t("keyHintLeft")}</span>
             </button>
 
             <button
@@ -159,8 +161,8 @@ export function FlashCard({ word, onRate }: Props) {
               className="flex flex-col items-center gap-1.5 py-4 rounded-2xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 dark:hover:bg-amber-900/30 border-2 border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400 transition-all active:scale-95"
             >
               <Minus size={24} />
-              <span className="text-sm font-bold">Hard</span>
-              <span className="text-[10px] opacity-50">↓ key</span>
+              <span className="text-sm font-bold">{t("hard")}</span>
+              <span className="text-[10px] opacity-50">{t("keyHintDown")}</span>
             </button>
 
             <button
@@ -168,8 +170,8 @@ export function FlashCard({ word, onRate }: Props) {
               className="flex flex-col items-center gap-1.5 py-4 rounded-2xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:hover:bg-emerald-900/30 border-2 border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 transition-all active:scale-95"
             >
               <ChevronRight size={24} />
-              <span className="text-sm font-bold">Got it!</span>
-              <span className="text-[10px] opacity-50">→ key</span>
+              <span className="text-sm font-bold">{t("gotIt")}</span>
+              <span className="text-[10px] opacity-50">{t("keyHintRight")}</span>
             </button>
 
           </div>

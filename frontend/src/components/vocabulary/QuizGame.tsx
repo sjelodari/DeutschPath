@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { speakGerman } from "@/src/lib/speak";
 import { reviewWord } from "@/src/lib/api";
 import { Volume2, RotateCcw, Trophy, X, Check } from "lucide-react";
@@ -64,14 +65,16 @@ function buildQuestion(words: any[], dir: Direction): Question | null {
 }
 
 export function QuizGame({ words, onClose }: Props) {
+  const t = useTranslations("quiz");
   const { translationLanguages } = useAppStore();
 
+  const germanLabel = t("german");
   const directions: Direction[] = [
-    { from: "de", fromLabel: "German", to: "de", toLabel: "German", toRtl: false },
+    { from: "de", fromLabel: germanLabel, to: "de", toLabel: germanLabel, toRtl: false },
   ];
   translationLanguages.forEach((lang) => {
-    directions.push({ from: "de", fromLabel: "German", to: lang.code, toLabel: lang.name, toRtl: lang.rtl });
-    directions.push({ from: lang.code, fromLabel: lang.name, to: "de", toLabel: "German", toRtl: false });
+    directions.push({ from: "de", fromLabel: germanLabel, to: lang.code, toLabel: lang.name, toRtl: lang.rtl });
+    directions.push({ from: lang.code, fromLabel: lang.name, to: "de", toLabel: germanLabel, toRtl: false });
   });
   const validDirs = directions.filter((d) => !(d.from === "de" && d.to === "de"));
 
@@ -146,13 +149,13 @@ export function QuizGame({ words, onClose }: Props) {
           >
             <X size={16} />
           </button>
-          <span className="text-xs text-slate-400 dark:text-slate-500">{words.length} words available</span>
+          <span className="text-xs text-slate-400 dark:text-slate-500">{t("wordsAvailable", { count: words.length })}</span>
         </div>
 
         <div className="text-center">
           <div className="text-4xl mb-2 select-none">🎯</div>
-          <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Quiz</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Pick a translation direction to start</p>
+          <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">{t("title")}</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t("pickDirection")}</p>
         </div>
 
         <div className="flex-1 space-y-2.5 overflow-y-auto">
@@ -164,9 +167,9 @@ export function QuizGame({ words, onClose }: Props) {
               className="w-full flex items-center gap-3 p-4 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 hover:border-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20 rounded-2xl transition-all active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed group"
             >
               <span className="text-2xl select-none">{LANG_FLAG[d.from] || "🌐"}</span>
-              <div className="flex-1 text-left">
+              <div className="flex-1 text-start">
                 <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{d.fromLabel}</p>
-                <p className="text-xs text-slate-400 dark:text-slate-500">→ Translate to {d.toLabel}</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500">{t("translateTo", { lang: d.toLabel })}</p>
               </div>
               <span className="text-2xl select-none">{LANG_FLAG[d.to] || "🌐"}</span>
             </button>
@@ -175,7 +178,7 @@ export function QuizGame({ words, onClose }: Props) {
 
         {words.length < 2 && (
           <p className="text-xs text-center text-slate-400 dark:text-slate-500">
-            Add at least 2 words to your vocabulary first.
+            {t("needTwoWords")}
           </p>
         )}
       </div>
@@ -196,7 +199,7 @@ export function QuizGame({ words, onClose }: Props) {
             {pct}<span className="text-3xl text-slate-400 dark:text-slate-500">%</span>
           </p>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-            {score} correct out of {total}
+            {t("correctOutOf", { score, total })}
           </p>
         </div>
 
@@ -214,21 +217,21 @@ export function QuizGame({ words, onClose }: Props) {
         <div className="flex items-center gap-8 text-center">
           <div>
             <p className="text-xl font-bold text-orange-500 tabular-nums">{bestStreak}</p>
-            <p className="text-xs text-slate-400 dark:text-slate-500">Best streak 🔥</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">{t("bestStreak")}</p>
           </div>
           <div>
             <p className="text-xl font-bold text-red-500 tabular-nums">{total - score}</p>
-            <p className="text-xs text-slate-400 dark:text-slate-500">Wrong</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">{t("wrong")}</p>
           </div>
           <div>
             <p className="text-xl font-bold text-emerald-500 tabular-nums">{score}</p>
-            <p className="text-xs text-slate-400 dark:text-slate-500">Correct</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">{t("correct")}</p>
           </div>
         </div>
 
         {wrongWords.length > 0 && (
           <div className="w-full max-w-xs bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/40 rounded-2xl p-3">
-            <p className="text-xs font-semibold text-red-600 dark:text-red-300 mb-2">Review these again:</p>
+            <p className="text-xs font-semibold text-red-600 dark:text-red-300 mb-2">{t("reviewTheseAgain")}</p>
             <div className="flex flex-wrap gap-1.5">
               {wrongWords.map((w, i) => (
                 <span key={i} className="text-xs bg-white dark:bg-slate-800 border border-red-200 dark:border-red-800/50 text-red-700 dark:text-red-300 px-2 py-0.5 rounded-full">
@@ -244,20 +247,20 @@ export function QuizGame({ words, onClose }: Props) {
             onClick={() => startQuiz(dir)}
             className="flex items-center gap-1.5 px-5 py-2.5 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 transition-colors"
           >
-            <RotateCcw size={14} /> Play again
+            <RotateCcw size={14} /> {t("playAgain")}
           </button>
           <button
             onClick={() => setDir(null)}
             className="px-5 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-sm font-semibold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
           >
-            Change mode
+            {t("changeMode")}
           </button>
         </div>
         <button
           onClick={onClose}
           className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
         >
-          Back to vocabulary
+          {t("backToVocabulary")}
         </button>
       </div>
     );
@@ -284,7 +287,7 @@ export function QuizGame({ words, onClose }: Props) {
             </span>
           )}
           <span className="text-xs font-medium text-slate-500 dark:text-slate-400 tabular-nums">
-            {score}/{total} correct
+            {t("scoreCorrect", { score, total })}
           </span>
         </div>
       </div>
@@ -334,7 +337,7 @@ export function QuizGame({ words, onClose }: Props) {
           const isCorrect = opt === question.correct;
           const isRevealed = answered !== null;
 
-          let btnCls = "w-full flex items-center gap-3 py-3.5 px-4 rounded-2xl border-2 text-sm font-medium text-left transition-all duration-150 ";
+          let btnCls = "w-full flex items-center gap-3 py-3.5 px-4 rounded-2xl border-2 text-sm font-medium text-start transition-all duration-150 ";
           let badgeCls = "w-8 h-8 rounded-xl flex items-center justify-center text-sm font-bold shrink-0 transition-colors ";
 
           if (!isRevealed) {

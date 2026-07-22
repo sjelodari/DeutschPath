@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { clsx } from "clsx";
 import {
   PenLine, Filter, ChevronDown, Loader2, AlertCircle,
@@ -73,6 +74,16 @@ const correctionColors: Record<string, { badge: string; bg: string }> = {
   word_choice:   { badge: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",    bg: "bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800/40" },
   style:         { badge: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300", bg: "bg-purple-50 dark:bg-purple-900/10 border-purple-200 dark:border-purple-800/40" },
 };
+
+/** `type` comes from Gemini's free-text correction output, not a fixed enum —
+ *  fall back to the raw value if it's ever outside the catalog's known keys. */
+function correctionTypeLabel(t: (key: string) => string, type: string): string {
+  try {
+    return t(`corrType_${type}`);
+  } catch {
+    return type.replace("_", " ");
+  }
+}
 
 const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
 const WRITING_TYPES = [
@@ -284,6 +295,7 @@ function generatePrintHTML(
 
 // ── Main Page ──────────────────────────────────────────────────────────────
 export default function WritingPage() {
+  const t = useTranslations("writing");
   const { userLevel, translationLanguages } = useAppStore();
 
   // Filter state
@@ -330,7 +342,7 @@ export default function WritingPage() {
       );
       setTopics(data);
     } catch (e: any) {
-      setTopicsError(e.message || "Failed to load topics");
+      setTopicsError(e.message || t("errLoadTopics"));
     } finally {
       setTopicsLoading(false);
     }
@@ -380,7 +392,7 @@ export default function WritingPage() {
       const results = await batchAnalyzeWords([vocabBtn.text], userLevel || "B1", translationLanguages?.length ? translationLanguages : [{ code: "en", name: "English" }]);
       if (results[0]) await saveWord(results[0]);
       if (toastTimer.current) clearTimeout(toastTimer.current);
-      setVocabToast(`"${vocabBtn.text}" saved!`);
+      setVocabToast(t("savedToast", { text: vocabBtn.text }));
       toastTimer.current = setTimeout(() => setVocabToast(""), 2500);
     } catch {
       // silent fail
@@ -407,14 +419,14 @@ export default function WritingPage() {
       setFeedback(result.feedback);
       setFeedbackTab("diff");
     } catch (e: any) {
-      setAnalyzeError(e.message || "Analysis failed. Please try again.");
+      setAnalyzeError(e.message || t("errAnalyze"));
     } finally {
       setAnalyzing(false);
     }
   };
 
   const handleDeleteSessions = async () => {
-    if (!confirm("Delete all writing session history?")) return;
+    if (!confirm(t("confirmDeleteSessions"))) return;
     await deleteWritingSessions();
     setSessions([]);
   };
@@ -464,7 +476,7 @@ export default function WritingPage() {
             className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded-full shadow-lg hover:bg-emerald-700 active:scale-95 transition-all whitespace-nowrap disabled:opacity-70"
           >
             {vocabSaving ? <Loader2 size={11} className="animate-spin" /> : <BookmarkPlus size={11} />}
-            Save &ldquo;{vocabBtn.text.length > 16 ? vocabBtn.text.slice(0, 16) + "…" : vocabBtn.text}&rdquo;
+            {t("saveSelection", { text: vocabBtn.text.length > 16 ? vocabBtn.text.slice(0, 16) + "…" : vocabBtn.text })}
           </button>
           <div className="flex justify-center -mt-px">
             <div className="w-0 h-0 border-l-[5px] border-r-[5px] border-t-[5px] border-l-transparent border-r-transparent border-t-emerald-600" />
@@ -488,9 +500,9 @@ export default function WritingPage() {
               <PenLine size={20} className="text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-900 dark:text-white">Writing Practice</h1>
+              <h1 className="text-xl font-bold text-slate-900 dark:text-white">{t("title")}</h1>
               <p className="text-sm text-slate-500 dark:text-slate-400">
-                Schreiben üben mit KI-Feedback
+                {t("subtitle")}
               </p>
             </div>
           </div>
@@ -499,7 +511,7 @@ export default function WritingPage() {
             className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           >
             <History size={15} />
-            History
+            {t("history")}
           </button>
         </div>
 
@@ -508,12 +520,12 @@ export default function WritingPage() {
           <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm flex justify-end">
             <div className="w-full max-w-md bg-white dark:bg-slate-900 h-full overflow-y-auto shadow-2xl flex flex-col">
               <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800 shrink-0">
-                <h2 className="font-semibold text-slate-800 dark:text-slate-100">Session History</h2>
+                <h2 className="font-semibold text-slate-800 dark:text-slate-100">{t("sessionHistory")}</h2>
                 <div className="flex gap-2">
                   {sessions.length > 0 && (
                     <button onClick={handleDeleteSessions}
                       className="flex items-center gap-1 text-xs text-red-500 hover:text-red-600 dark:hover:text-red-400 transition-colors">
-                      <Trash2 size={13} /> Clear all
+                      <Trash2 size={13} /> {t("clearAll")}
                     </button>
                   )}
                   <button onClick={() => setShowHistory(false)}
@@ -529,14 +541,14 @@ export default function WritingPage() {
                   </div>
                 ) : sessions.length === 0 ? (
                   <p className="text-center text-slate-400 dark:text-slate-500 text-sm py-10">
-                    No sessions yet. Start writing!
+                    {t("noSessions")}
                   </p>
                 ) : sessions.map(s => (
                   <div key={s.id}
                     className="p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
                     <div className="flex items-start justify-between gap-2 mb-1">
                       <span className="text-sm font-medium text-slate-800 dark:text-slate-100 leading-tight">
-                        {s.topic?.title ?? "Free Writing"}
+                        {s.topic?.title ?? t("freeWriting")}
                       </span>
                       {s.topic?.level && <LevelBadge level={s.topic.level} size="sm" />}
                     </div>
@@ -547,7 +559,7 @@ export default function WritingPage() {
                         </span>
                       )}
                       <span>{new Date(s.created_at).toLocaleDateString()}</span>
-                      <span>{wordCount(s.user_text)} words</span>
+                      <span>{t("wordsCount", { count: wordCount(s.user_text) })}</span>
                     </div>
                   </div>
                 ))}
@@ -560,7 +572,7 @@ export default function WritingPage() {
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 mb-5">
           <div className="flex flex-wrap gap-3 items-center">
             <span className="flex items-center gap-1.5 text-sm font-medium text-slate-500 dark:text-slate-400">
-              <Filter size={14} /> Filter:
+              <Filter size={14} /> {t("filterLabel")}
             </span>
 
             {/* Level pills */}
@@ -570,7 +582,7 @@ export default function WritingPage() {
                 className={clsx("px-2.5 py-1 rounded-full text-xs font-medium transition-colors",
                   levelFilter === "" ? "bg-brand-600 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
                 )}
-              >All Levels</button>
+              >{t("allLevels")}</button>
               {LEVELS.map(l => (
                 <button key={l}
                   onClick={() => setLevelFilter(l === levelFilter ? "" : l)}
@@ -586,12 +598,12 @@ export default function WritingPage() {
               <select
                 value={typeFilter}
                 onChange={e => setTypeFilter(e.target.value)}
-                className="appearance-none pl-3 pr-7 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500"
+                className="appearance-none ps-3 pe-7 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500"
               >
-                <option value="">All Types</option>
-                {WRITING_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                <option value="">{t("allTypes")}</option>
+                {WRITING_TYPES.map(wt => <option key={wt} value={wt}>{wt}</option>)}
               </select>
-              <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <ChevronDown size={13} className="absolute end-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             </div>
 
             {/* Exam dropdown */}
@@ -599,13 +611,13 @@ export default function WritingPage() {
               <select
                 value={examFilter}
                 onChange={e => setExamFilter(e.target.value)}
-                className="appearance-none pl-3 pr-7 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500"
+                className="appearance-none ps-3 pe-7 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500"
               >
-                <option value="">All Exams</option>
-                <option value="__none__">No Exam</option>
+                <option value="">{t("allExams")}</option>
+                <option value="__none__">{t("noExam")}</option>
                 {EXAMS.map(e => <option key={e} value={e}>{e}</option>)}
               </select>
-              <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <ChevronDown size={13} className="absolute end-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             </div>
 
             {(levelFilter || typeFilter || examFilter) && (
@@ -613,12 +625,12 @@ export default function WritingPage() {
                 onClick={() => { setLevelFilter(""); setTypeFilter(""); setExamFilter(""); }}
                 className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 flex items-center gap-1"
               >
-                <X size={12} /> Clear
+                <X size={12} /> {t("clear")}
               </button>
             )}
 
-            <span className="ml-auto text-xs text-slate-400 dark:text-slate-500">
-              {topics.length} topics
+            <span className="ms-auto text-xs text-slate-400 dark:text-slate-500">
+              {t("topicsCount", { count: topics.length })}
             </span>
           </div>
         </div>
@@ -630,7 +642,7 @@ export default function WritingPage() {
           <div className="lg:col-span-2">
             <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
               <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
-                <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Themen</h2>
+                <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">{t("topicsHeader")}</h2>
               </div>
               <div className="p-3 space-y-2 max-h-[calc(100vh-280px)] overflow-y-auto">
                 {topicsLoading ? (
@@ -642,7 +654,7 @@ export default function WritingPage() {
                     <AlertCircle size={16} /> {topicsError}
                   </div>
                 ) : topics.length === 0 ? (
-                  <p className="text-center text-slate-400 text-sm py-8">No topics found</p>
+                  <p className="text-center text-slate-400 text-sm py-8">{t("noTopics")}</p>
                 ) : topics.map(topic => (
                   <WritingTopicCard
                     key={topic.id}
@@ -663,10 +675,10 @@ export default function WritingPage() {
                   <PenLine size={28} className="text-slate-400 dark:text-slate-500" />
                 </div>
                 <p className="text-slate-600 dark:text-slate-300 font-medium mb-1">
-                  Wähle ein Thema aus der Liste
+                  {t("emptyTitle")}
                 </p>
                 <p className="text-sm text-slate-400 dark:text-slate-500">
-                  Schreibe auf Deutsch und erhalte detailliertes KI-Feedback
+                  {t("emptySubtitle")}
                 </p>
               </div>
             ) : !feedback ? (
@@ -676,7 +688,7 @@ export default function WritingPage() {
                 <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
                   <div className="flex items-start gap-3 mb-2">
                     <LevelBadge level={selectedTopic.level} size="md" />
-                    <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100 leading-tight flex-1">
+                    <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100 leading-tight flex-1" dir="ltr" lang="de">
                       {selectedTopic.title}
                     </h2>
                     {selectedTopic.exam && (
@@ -688,11 +700,11 @@ export default function WritingPage() {
                   <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mt-1">
                     <span className="inline-flex items-center gap-1"><FileText size={11} /> {selectedTopic.writing_type}</span>
                     <span>·</span>
-                    <span>{selectedTopic.word_count_min}–{selectedTopic.word_count_max} Wörter</span>
+                    <span dir="ltr">{t("wordRange", { min: selectedTopic.word_count_min, max: selectedTopic.word_count_max })}</span>
                     {selectedTopic.time_limit_min && (
                       <>
                         <span>·</span>
-                        <span className="inline-flex items-center gap-1"><Clock size={11} /> {selectedTopic.time_limit_min} Min</span>
+                        <span className="inline-flex items-center gap-1" dir="ltr"><Clock size={11} /> {t("minutes", { count: selectedTopic.time_limit_min })}</span>
                       </>
                     )}
                   </div>
@@ -700,8 +712,8 @@ export default function WritingPage() {
 
                 {/* Prompt box */}
                 <div className="mx-5 mt-4 p-4 rounded-lg bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-700/40">
-                  <p className="text-sm font-medium text-brand-800 dark:text-brand-200 mb-1.5">Aufgabenstellung:</p>
-                  <p className="text-sm text-brand-700 dark:text-brand-300 leading-relaxed whitespace-pre-line">
+                  <p className="text-sm font-medium text-brand-800 dark:text-brand-200 mb-1.5" dir="auto">{t("taskLabel")}</p>
+                  <p className="text-sm text-brand-700 dark:text-brand-300 leading-relaxed whitespace-pre-line" dir="ltr" lang="de">
                     {selectedTopic.prompt}
                   </p>
                 </div>
@@ -711,14 +723,16 @@ export default function WritingPage() {
                   <textarea
                     value={userText}
                     onChange={e => setUserText(e.target.value)}
-                    placeholder="Schreiben Sie Ihren Text hier auf Deutsch..."
+                    placeholder={t("editorPlaceholder")}
                     rows={14}
+                    dir="ltr"
+                    lang="de"
                     className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 text-sm p-4 resize-y focus:outline-none focus:ring-2 focus:ring-brand-500 dark:focus:ring-brand-400 placeholder-slate-400 dark:placeholder-slate-500 leading-relaxed"
                   />
 
                   {/* Word count bar */}
                   <div className="mt-2 flex items-center justify-between">
-                    <div className="flex-1 mr-3">
+                    <div className="flex-1 me-3">
                       <div className="h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
                         <div
                           className={clsx(
@@ -734,14 +748,14 @@ export default function WritingPage() {
                       wc < minWords ? "text-slate-400 dark:text-slate-500"
                         : wc > maxWords ? "text-orange-600 dark:text-orange-400"
                         : "text-green-600 dark:text-green-400"
-                    )}>
+                    )} dir="ltr">
                       {wc} / {minWords}–{maxWords}
                     </span>
                   </div>
 
                   {wc < minWords && wc > 0 && (
                     <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-                      Noch {minWords - wc} Wörter bis zum Minimum
+                      {t("wordsToMin", { count: minWords - wc })}
                     </p>
                   )}
 
@@ -763,9 +777,9 @@ export default function WritingPage() {
                     )}
                   >
                     {analyzing ? (
-                      <><Loader2 size={16} className="animate-spin" /> Analysiere…</>
+                      <><Loader2 size={16} className="animate-spin" /> {t("analyzing")}</>
                     ) : (
-                      <><PenLine size={16} /> Text analysieren</>
+                      <><PenLine size={16} /> {t("analyzeBtn")}</>
                     )}
                   </button>
                 </div>
@@ -780,24 +794,24 @@ export default function WritingPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-2">
                         <h3 className="font-semibold text-slate-800 dark:text-slate-100">
-                          {selectedTopic?.title ?? "Ergebnis"}
+                          {selectedTopic?.title ?? t("resultFallback")}
                         </h3>
                         <LevelBadge level={feedback.level_achieved} size="sm" />
                         {feedback.level_achieved !== selectedTopic?.level && (
                           <span className="text-xs text-slate-400 dark:text-slate-500">
-                            (Ziel: {selectedTopic?.level})
+                            {t("targetLevel", { level: selectedTopic?.level ?? "" })}
                           </span>
                         )}
                       </div>
                       <div className="flex gap-4 text-sm text-slate-600 dark:text-slate-300 flex-wrap">
-                        <span className="flex items-center gap-1"><BookOpen size={13} /> {feedback.word_count} Wörter</span>
+                        <span className="flex items-center gap-1"><BookOpen size={13} /> {t("wordsCount", { count: feedback.word_count })}</span>
                         <span className="flex items-center gap-1">
                           <AlertCircle size={13} className="text-orange-500" />
-                          {feedback.corrections.length} Korrekturen
+                          {t("correctionsCount", { count: feedback.corrections.length })}
                         </span>
                         <span className="flex items-center gap-1">
                           <Star size={13} className="text-yellow-500" />
-                          Struktur: {feedback.structure.score}/10
+                          {t("structureScore", { score: feedback.structure.score })}
                         </span>
                       </div>
                       <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
@@ -812,10 +826,10 @@ export default function WritingPage() {
                   <div className="flex border-b border-slate-200 dark:border-slate-800 overflow-x-auto">
                     {(["diff", "corrections", "vocabulary", "structure"] as FeedbackTab[]).map(tab => {
                       const labels: Record<FeedbackTab, string> = {
-                        diff: "Diff View",
-                        corrections: `Corrections (${feedback.corrections.length})`,
-                        vocabulary: `Vocabulary (${feedback.vocabulary_suggestions.length})`,
-                        structure: "Structure",
+                        diff: t("tabDiff"),
+                        corrections: t("tabCorrections", { count: feedback.corrections.length }),
+                        vocabulary: t("tabVocabulary", { count: feedback.vocabulary_suggestions.length }),
+                        structure: t("tabStructure"),
                       };
                       return (
                         <button key={tab}
@@ -838,7 +852,7 @@ export default function WritingPage() {
                     {feedbackTab === "diff" && (
                       <div className="space-y-3">
                         <p className="text-xs text-amber-600 dark:text-amber-400 italic">
-                          Highlight words in the corrected version to save them to your vocabulary.
+                          {t("diffHint")}
                         </p>
                         <DiffView
                           originalText={userText}
@@ -852,7 +866,7 @@ export default function WritingPage() {
                       <div className="space-y-4">
                         {feedback.corrections.length === 0 ? (
                           <div className="flex items-center gap-2 text-green-600 dark:text-green-400 text-sm">
-                            <CheckCircle2 size={16} /> Keine Fehler gefunden — ausgezeichnet!
+                            <CheckCircle2 size={16} /> {t("noErrors")}
                           </div>
                         ) : Object.entries(groupedCorrections).map(([type, corrections]) => {
                           const colors = correctionColors[type] ?? correctionColors.grammar;
@@ -860,7 +874,7 @@ export default function WritingPage() {
                             <div key={type}>
                               <div className="flex items-center gap-2 mb-2">
                                 <span className={clsx("text-xs px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide", colors.badge)}>
-                                  {type.replace("_", " ")}
+                                  {correctionTypeLabel(t, type)}
                                 </span>
                                 <span className="text-xs text-slate-400">({corrections.length})</span>
                               </div>
@@ -868,15 +882,15 @@ export default function WritingPage() {
                                 {corrections.map((c, idx) => (
                                   <div key={idx} className={clsx("rounded-lg border p-3 text-sm", colors.bg)}>
                                     <div className="flex items-start gap-2 flex-wrap mb-1">
-                                      <span className="line-through text-slate-500 dark:text-slate-400 font-mono text-xs bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded">
+                                      <span className="line-through text-slate-500 dark:text-slate-400 font-mono text-xs bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded" dir="ltr" lang="de">
                                         {c.original}
                                       </span>
-                                      <ArrowRight size={13} className="text-slate-400 mt-0.5 shrink-0" />
-                                      <span className="font-medium font-mono text-xs bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded text-slate-800 dark:text-slate-100">
+                                      <ArrowRight size={13} className="text-slate-400 mt-0.5 shrink-0 rtl:-scale-x-100" />
+                                      <span className="font-medium font-mono text-xs bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded text-slate-800 dark:text-slate-100" dir="ltr" lang="de">
                                         {c.corrected}
                                       </span>
                                     </div>
-                                    <p className="text-slate-600 dark:text-slate-300 text-xs leading-relaxed">
+                                    <p className="text-slate-600 dark:text-slate-300 text-xs leading-relaxed" dir="auto">
                                       {c.explanation}
                                     </p>
                                   </div>
@@ -892,19 +906,19 @@ export default function WritingPage() {
                     {feedbackTab === "vocabulary" && (
                       <div className="space-y-3">
                         {feedback.vocabulary_suggestions.length === 0 ? (
-                          <p className="text-sm text-slate-400">Keine Vokabularvorschläge.</p>
+                          <p className="text-sm text-slate-400">{t("noVocabSuggestions")}</p>
                         ) : feedback.vocabulary_suggestions.map((v, idx) => (
                           <div key={idx} className="rounded-lg border border-blue-200 dark:border-blue-800/40 bg-blue-50 dark:bg-blue-900/10 p-3">
                             <div className="flex items-center gap-2 flex-wrap mb-1">
-                              <span className="font-mono text-xs bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded text-slate-600 dark:text-slate-400 line-through">
+                              <span className="font-mono text-xs bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded text-slate-600 dark:text-slate-400 line-through" dir="ltr" lang="de">
                                 {v.original}
                               </span>
-                              <ArrowRight size={13} className="text-blue-400 shrink-0" />
-                              <span className="font-mono text-xs bg-blue-600 text-white px-1.5 py-0.5 rounded font-semibold">
+                              <ArrowRight size={13} className="text-blue-400 shrink-0 rtl:-scale-x-100" />
+                              <span className="font-mono text-xs bg-blue-600 text-white px-1.5 py-0.5 rounded font-semibold" dir="ltr" lang="de">
                                 {v.suggestion}
                               </span>
                             </div>
-                            <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+                            <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed" dir="auto">
                               {v.reason}
                             </p>
                           </div>
@@ -934,7 +948,7 @@ export default function WritingPage() {
                             <div className="flex items-center gap-2 mb-2">
                               <GraduationCap size={14} className="text-yellow-700 dark:text-yellow-300" />
                               <span className="text-xs font-semibold text-yellow-700 dark:text-yellow-300 uppercase tracking-wide">
-                                Prüfungsfeedback — {selectedTopic?.exam}
+                                {t("examFeedback", { exam: selectedTopic?.exam ?? "" })}
                               </span>
                             </div>
                             <p className="text-sm text-yellow-800 dark:text-yellow-200 leading-relaxed">
@@ -948,7 +962,7 @@ export default function WritingPage() {
                           <div>
                             <div className="flex items-center gap-2 mb-2">
                               <ThumbsUp size={14} className="text-green-600 dark:text-green-400" />
-                              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Stärken</span>
+                              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{t("strengths")}</span>
                             </div>
                             <ul className="space-y-1">
                               {feedback.strengths.map((s, i) => (
@@ -966,7 +980,7 @@ export default function WritingPage() {
                           <div>
                             <div className="flex items-center gap-2 mb-2">
                               <Lightbulb size={14} className="text-blue-600 dark:text-blue-400" />
-                              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Verbesserungspotenzial</span>
+                              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{t("improvements")}</span>
                             </div>
                             <ul className="space-y-1">
                               {feedback.improvements.map((s, i) => (
@@ -989,19 +1003,19 @@ export default function WritingPage() {
                     onClick={() => { setFeedback(null); setUserText(""); }}
                     className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                   >
-                    <RotateCcw size={15} /> Nochmal versuchen
+                    <RotateCcw size={15} /> {t("tryAgain")}
                   </button>
                   <button
                     onClick={handleExportPDF}
                     className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                   >
-                    <Download size={15} /> Export PDF
+                    <Download size={15} /> {t("exportPdf")}
                   </button>
                   <button
                     onClick={() => { setSelectedTopic(null); setFeedback(null); setUserText(""); }}
                     className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold transition-colors shadow-sm"
                   >
-                    <PenLine size={15} /> Neues Thema
+                    <PenLine size={15} /> {t("newTopic")}
                   </button>
                 </div>
               </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
@@ -18,8 +19,8 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/b
 const MARK_SYMBOLS: Record<MarkType, string> = {
   text: "T", x: "✕", dot: "●", check: "✓", circle: "○", highlight: "▬",
 };
-const MARK_LABELS: Record<MarkType, string> = {
-  text: "Text note", x: "Cross", dot: "Dot", check: "Check", circle: "Circle", highlight: "Highlight",
+const MARK_LABEL_KEYS: Record<MarkType, string> = {
+  text: "markText", x: "markCross", dot: "markDot", check: "markCheck", circle: "markCircle", highlight: "markHighlight",
 };
 const TEXT_COLORS  = ["#EF4444", "#3B82F6", "#10B981", "#F59E0B", "#8B5CF6", "#475569"];
 const HIGHLIGHT_COLORS = ["#FEF08A", "#86EFAC", "#93C5FD", "#FDA4AF", "#FDE68A"];
@@ -82,6 +83,7 @@ export function PDFViewer({
   const [numPages, setNumPages] = useState(totalPages);
   const [pageInput, setPageInput] = useState(String(activePage));
   const [floatingBtn, setFloatingBtn] = useState<FloatingBtn | null>(null);
+  const t = useTranslations("pdfViewer");
   const [toast, setToast] = useState<string>("");
 
   // Draw mode
@@ -186,7 +188,7 @@ export function PDFViewer({
     window.getSelection()?.removeAllRanges();
     clearTimeout(toastTimer.current);
     const preview = floatingBtn.text.length > 20 ? floatingBtn.text.slice(0, 20) + "…" : floatingBtn.text;
-    setToast(`Added "${preview}"`);
+    setToast(t("addedToast", { text: preview }));
     toastTimer.current = setTimeout(() => setToast(""), 2000);
   };
 
@@ -392,12 +394,12 @@ export function PDFViewer({
       onSaved?.();
 
       clearTimeout(toastTimer.current);
-      setToast("Saved ✓");
+      setToast(t("savedToast"));
       toastTimer.current = setTimeout(() => setToast(""), 2500);
     } catch (err) {
       console.error("Save failed", err);
       clearTimeout(toastTimer.current);
-      setToast("Save failed ✗");
+      setToast(t("saveFailedToast"));
       toastTimer.current = setTimeout(() => setToast(""), 2500);
     } finally {
       setSaving(false);
@@ -424,7 +426,7 @@ export function PDFViewer({
             className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded-full shadow-lg hover:bg-emerald-700 active:scale-95 transition-all whitespace-nowrap"
           >
             <Plus size={11} />
-            Add &ldquo;{floatingBtn.text.length > 18 ? floatingBtn.text.slice(0, 18) + "…" : floatingBtn.text}&rdquo;
+            {t("addSelection", { text: floatingBtn.text.length > 18 ? floatingBtn.text.slice(0, 18) + "…" : floatingBtn.text })}
           </button>
           <div className="flex justify-center -mt-px">
             <div className="w-0 h-0 border-l-[5px] border-r-[5px] border-t-[5px] border-l-transparent border-r-transparent border-t-emerald-600" />
@@ -448,7 +450,7 @@ export function PDFViewer({
             disabled={activePage <= 1}
             className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40"
           >
-            <ChevronLeft size={18} />
+            <ChevronLeft size={18} className="rtl:-scale-x-100" />
           </button>
           <div className="flex items-center gap-1 text-sm text-slate-600 dark:text-slate-300">
             <input
@@ -468,7 +470,7 @@ export function PDFViewer({
             disabled={activePage >= numPages}
             className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40"
           >
-            <ChevronRight size={18} />
+            <ChevronRight size={18} className="rtl:-scale-x-100" />
           </button>
         </div>
 
@@ -478,21 +480,21 @@ export function PDFViewer({
           <button
             onClick={() => setScale((s) => Math.max(0.5, +(s - 0.25).toFixed(2)))}
             className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400"
-            title="Zoom out"
+            title={t("zoomOut")}
           >
             <ZoomOut size={15} />
           </button>
           <button
             onClick={() => setScale(1.2)}
             className="text-xs text-slate-500 dark:text-slate-400 w-10 text-center hover:text-slate-800 dark:hover:text-slate-200 tabular-nums"
-            title="Reset zoom"
+            title={t("resetZoom")}
           >
             {Math.round(scale * 100)}%
           </button>
           <button
             onClick={() => setScale((s) => Math.min(3.0, +(s + 0.25).toFixed(2)))}
             className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400"
-            title="Zoom in"
+            title={t("zoomIn")}
           >
             <ZoomIn size={15} />
           </button>
@@ -515,20 +517,20 @@ export function PDFViewer({
                     ? "bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400 font-semibold"
                     : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
                 }`}
-                title="Mark mode"
+                title={t("markMode")}
               >
                 <Pen size={13} />
-                {annotateMode ? "Marking" : "Mark"}
+                {annotateMode ? t("marking") : t("mark")}
               </button>
 
               <button
                 onClick={handleSavePDF}
                 disabled={saving || annotations.length === 0}
                 className="flex items-center gap-1 px-2 py-1 text-xs bg-emerald-600 text-white rounded font-semibold hover:bg-emerald-700 disabled:opacity-40 transition-colors"
-                title="Bake marks into PDF and save to disk"
+                title={t("saveTitle")}
               >
                 {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-                {saving ? "Saving…" : "Save"}
+                {saving ? t("saving") : t("save")}
               </button>
 
               <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
@@ -541,10 +543,10 @@ export function PDFViewer({
               <button
                 onClick={onTogglePanel}
                 className="flex items-center gap-1 px-2 py-1 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded"
-                title={panelVisible ? "Hide text panel" : "Show text panel"}
+                title={panelVisible ? t("hidePanelTitle") : t("showPanelTitle")}
               >
                 {panelVisible ? <PanelRightClose size={14} /> : <PanelRight size={14} />}
-                {panelVisible ? "Hide" : "Panel"}
+                {panelVisible ? t("hide") : t("panel")}
               </button>
             </>
           )}
@@ -566,10 +568,10 @@ export function PDFViewer({
                     ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 font-semibold"
                     : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
                 }`}
-                title="Draw regions to OCR"
+                title={t("drawTitle")}
               >
                 <Pencil size={13} />
-                {drawMode ? "Drawing…" : "Draw"}
+                {drawMode ? t("drawing") : t("draw")}
               </button>
 
               {regions.length > 0 && (
@@ -580,7 +582,7 @@ export function PDFViewer({
                     className="flex items-center gap-1 px-2 py-1 text-xs bg-brand-600 text-white rounded font-semibold hover:bg-brand-700 disabled:opacity-50 transition-colors"
                   >
                     {extracting ? <Loader2 size={12} className="animate-spin" /> : <Scan size={12} />}
-                    {extracting ? "Extracting…" : `Extract ${regions.length}`}
+                    {extracting ? t("extracting") : t("extractCount", { count: regions.length })}
                   </button>
                   {!extracting && (
                     <button
@@ -602,24 +604,24 @@ export function PDFViewer({
         <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 select-none">
           {/* Type buttons */}
           <div className="flex items-center gap-0.5">
-            {(["text", "highlight", "x", "dot", "check", "circle"] as MarkType[]).map((t) => (
+            {(["text", "highlight", "x", "dot", "check", "circle"] as MarkType[]).map((mt) => (
               <button
-                key={t}
+                key={mt}
                 onClick={() => {
                   const wasHL = markType === "highlight";
-                  const isHL  = t === "highlight";
-                  setMarkType(t);
+                  const isHL  = mt === "highlight";
+                  setMarkType(mt);
                   if (!wasHL && isHL)  setMarkColor(HIGHLIGHT_COLORS[0]);
                   if (wasHL  && !isHL) setMarkColor(TEXT_COLORS[0]);
                 }}
-                title={MARK_LABELS[t]}
+                title={t(MARK_LABEL_KEYS[mt])}
                 className={`w-7 h-7 flex items-center justify-center rounded-lg text-sm font-bold transition-all ${
-                  markType === t
+                  markType === mt
                     ? "bg-brand-100 dark:bg-brand-900/40 text-brand-700 dark:text-brand-300 shadow-sm"
                     : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-800 dark:hover:text-slate-200"
                 }`}
               >
-                {MARK_SYMBOLS[t]}
+                {MARK_SYMBOLS[mt]}
               </button>
             ))}
           </div>
@@ -672,7 +674,7 @@ export function PDFViewer({
           <button
             onClick={() => { setAnnotateMode(false); setPendingAnnotation(null); setCurrentHighlight(null); }}
             className="w-6 h-6 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-            title="Exit mark mode"
+            title={t("exitMarkMode")}
           >
             <X size={12} />
           </button>
@@ -688,8 +690,8 @@ export function PDFViewer({
           <Document
             file={fileUrl}
             onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-            loading={<div className="text-slate-500 mt-20 px-8">Loading PDF…</div>}
-            error={<div className="text-red-500 mt-20 px-8">Failed to load PDF.</div>}
+            loading={<div className="text-slate-500 mt-20 px-8">{t("loadingPdf")}</div>}
+            error={<div className="text-red-500 mt-20 px-8">{t("pdfLoadFailed")}</div>}
           >
             <Page
               pageNumber={activePage}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { BookmarkPlus, Check, ChevronDown, ChevronUp, X } from "lucide-react";
 import { useAppStore } from "@/src/lib/store";
 import { getTranslation, getExampleTranslation } from "@/src/lib/languages";
@@ -31,6 +32,7 @@ interface Props {
 }
 
 export function AnalysisTable({ results, onSaveVocab, onDelete }: Props) {
+  const t = useTranslations("analysisTable");
   const { translationLanguages } = useAppStore();
   const langs = translationLanguages.length > 0
     ? translationLanguages
@@ -71,7 +73,7 @@ export function AnalysisTable({ results, onSaveVocab, onDelete }: Props) {
       >
         {/* Word + badges */}
         <td className="px-3 py-2.5 min-w-[120px]">
-          <div className="font-semibold text-slate-900 dark:text-slate-100 text-sm">
+          <div className="font-semibold text-slate-900 dark:text-slate-100 text-sm" dir="ltr" lang="de">
             {item.german || item.original}
           </div>
           <div className="flex flex-wrap items-center gap-1 mt-1">
@@ -121,7 +123,7 @@ export function AnalysisTable({ results, onSaveVocab, onDelete }: Props) {
           <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={() => handleVocab(item)}
-              title={isSaved ? "Saved to Vocabulary" : "Save to Vocabulary"}
+              title={isSaved ? t("savedToVocab") : t("saveToVocab")}
               className={`p-1.5 rounded-lg transition-all ${
                 isSaved
                   ? "text-emerald-600 dark:text-emerald-400"
@@ -133,7 +135,7 @@ export function AnalysisTable({ results, onSaveVocab, onDelete }: Props) {
             {onDelete && (
               <button
                 onClick={() => onDelete(i)}
-                title="Remove"
+                title={t("remove")}
                 className="p-1 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
               >
                 <X size={11} />
@@ -143,7 +145,7 @@ export function AnalysisTable({ results, onSaveVocab, onDelete }: Props) {
         </td>
 
         {/* Expand chevron */}
-        <td className="pr-2 py-2.5 w-6">
+        <td className="pe-2 py-2.5 w-6">
           {isExp ? (
             <ChevronUp size={13} className="text-slate-400 dark:text-slate-500" />
           ) : (
@@ -160,9 +162,9 @@ export function AnalysisTable({ results, onSaveVocab, onDelete }: Props) {
             {item.example_de && (
               <div>
                 <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-wide font-semibold mb-0.5">
-                  Example
+                  {t("example")}
                 </p>
-                <p className="text-sm text-slate-800 dark:text-slate-200 italic">{item.example_de}</p>
+                <p className="text-sm text-slate-800 dark:text-slate-200 italic" dir="ltr" lang="de">{item.example_de}</p>
                 {langs.map((lang) => {
                   const ex = getExampleTranslation(item, lang.code);
                   return ex ? (
@@ -196,8 +198,8 @@ export function AnalysisTable({ results, onSaveVocab, onDelete }: Props) {
       <table className="w-full border-collapse">
         <thead className="sticky top-0 z-10">
           <tr className="bg-slate-100 dark:bg-slate-800 text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-            <th className="text-left px-3 py-2 font-semibold border-b border-slate-200 dark:border-slate-700">
-              Word
+            <th className="text-start px-3 py-2 font-semibold border-b border-slate-200 dark:border-slate-700">
+              {t("word")}
             </th>
             {langs.map((lang) => (
               <th

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { FlashCard } from "@/src/components/vocabulary/FlashCard";
 import { QuizGame } from "@/src/components/vocabulary/QuizGame";
 import { LevelBadge } from "@/src/components/layout/LevelBadge";
@@ -12,17 +13,18 @@ import { getTranslation } from "@/src/lib/languages";
 
 type Mode = "review" | "browse" | "quiz";
 
-function wordStatus(word: any): { label: string; color: string } {
+function wordStatus(word: any): { key: string; color: string } {
   if (!word.seen_count || word.seen_count === 0)
-    return { label: "New", color: "bg-blue-400" };
+    return { key: "statusNew", color: "bg-blue-400" };
   if (word.confidence >= 4)
-    return { label: "Mastered", color: "bg-emerald-500" };
+    return { key: "statusMastered", color: "bg-emerald-500" };
   if (word.confidence >= 2)
-    return { label: "Learning", color: "bg-amber-400" };
-  return { label: "Struggling", color: "bg-red-400" };
+    return { key: "statusLearning", color: "bg-amber-400" };
+  return { key: "statusStruggling", color: "bg-red-400" };
 }
 
 export default function VocabularyPage() {
+  const t = useTranslations("vocabulary");
   const { userLevel, translationLanguages } = useAppStore();
   const langs = translationLanguages.length > 0
     ? translationLanguages
@@ -106,7 +108,7 @@ export default function VocabularyPage() {
       const results = await batchAnalyzeWords([addInput.trim()], userLevel, translationLanguages);
       if (results[0]) setAddResult(results[0]);
     } catch (e: any) {
-      setAddError(e?.message?.slice(0, 100) || "Analysis failed");
+      setAddError(e?.message?.slice(0, 100) || t("analysisFailed"));
     } finally {
       setAddAnalyzing(false);
     }
@@ -127,11 +129,11 @@ export default function VocabularyPage() {
   const exportPDF = () => {
     const wordsToExport = filteredWords.length > 0 ? filteredWords : allWords;
     const headerCells = `
-      <th>Word</th>
-      <th>Type</th>
-      <th>Level</th>
+      <th>${t("exportColWord")}</th>
+      <th>${t("exportColType")}</th>
+      <th>${t("exportColLevel")}</th>
       ${langs.map((l) => `<th>${l.nativeName}</th>`).join("")}
-      <th>Example</th>
+      <th>${t("exportColExample")}</th>
     `;
     const rows = wordsToExport.map((w) => `
       <tr>
@@ -146,7 +148,7 @@ export default function VocabularyPage() {
     const html = `<!DOCTYPE html>
 <html><head>
   <meta charset="utf-8">
-  <title>Vocabulary Export</title>
+  <title>${t("exportTitle")}</title>
   <style>
     body { font-family: Georgia, serif; font-size: 11px; margin: 20px; color: #1e293b; }
     h1 { font-size: 20px; margin-bottom: 4px; }
@@ -158,8 +160,8 @@ export default function VocabularyPage() {
     @media print { @page { margin: 1.5cm; } }
   </style>
 </head><body>
-  <h1>My German Vocabulary</h1>
-  <p class="sub">${wordsToExport.length} words</p>
+  <h1>${t("exportHeading")}</h1>
+  <p class="sub">${t("wordCount", { count: wordsToExport.length })}</p>
   <table>
     <thead><tr>${headerCells}</tr></thead>
     <tbody>${rows}</tbody>
@@ -211,9 +213,9 @@ export default function VocabularyPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8 flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Vocabulary</h1>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{t("title")}</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            {allWords.length} words saved · {dueWords.length} due for review
+            {t("headerStats", { saved: allWords.length, due: dueWords.length })}
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -223,7 +225,7 @@ export default function VocabularyPage() {
               mode === "review" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
             }`}
           >
-            <Layers size={16} /> Review ({dueWords.length})
+            <Layers size={16} /> {t("review")} ({dueWords.length})
           </button>
           <button
             onClick={() => setMode("browse")}
@@ -231,13 +233,13 @@ export default function VocabularyPage() {
               mode === "browse" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
             }`}
           >
-            <BookOpen size={16} /> Browse
+            <BookOpen size={16} /> {t("browse")}
           </button>
           <button
             onClick={() => setMode("quiz")}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
           >
-            <Gamepad2 size={16} /> Quiz
+            <Gamepad2 size={16} /> {t("quiz")}
           </button>
         </div>
       </div>
@@ -249,19 +251,19 @@ export default function VocabularyPage() {
             <div className="text-center py-20">
               <div className="text-5xl mb-4">🎉</div>
               <h2 className="text-xl font-bold text-slate-700 dark:text-slate-200">
-                {sessionDone ? "Session complete!" : "All caught up!"}
+                {sessionDone ? t("sessionComplete") : t("allCaughtUp")}
               </h2>
               <p className="text-slate-500 dark:text-slate-400 mt-2">
                 {sessionDone
-                  ? `You reviewed ${reviewed} words. Come back tomorrow for more.`
-                  : "No words due for review. Add more from the book reader."}
+                  ? t("sessionSummary", { count: reviewed })
+                  : t("noWordsDue")}
               </p>
               {sessionDone && (
                 <button
                   onClick={() => { setCurrentIndex(0); setReviewed(0); setSessionDone(false); loadData(); }}
                   className="mt-6 px-6 py-2.5 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700"
                 >
-                  Start new session
+                  {t("startNewSession")}
                 </button>
               )}
             </div>
@@ -269,7 +271,7 @@ export default function VocabularyPage() {
             <>
               <div className="mb-6">
                 <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
-                  <span>{currentIndex} / {dueWords.length} reviewed</span>
+                  <span>{t("reviewedProgress", { current: currentIndex, total: dueWords.length })}</span>
                   <span>{Math.round((currentIndex / dueWords.length) * 100)}%</span>
                 </div>
                 <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full">
@@ -292,14 +294,14 @@ export default function VocabularyPage() {
           <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
             <div className="flex gap-4 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
               {[
-                { color: "bg-blue-400", label: "New" },
-                { color: "bg-red-400", label: "Struggling" },
-                { color: "bg-amber-400", label: "Learning" },
-                { color: "bg-emerald-500", label: "Mastered" },
-              ].map(({ color, label }) => (
-                <span key={label} className="flex items-center gap-1.5">
+                { color: "bg-blue-400", key: "statusNew" },
+                { color: "bg-red-400", key: "statusStruggling" },
+                { color: "bg-amber-400", key: "statusLearning" },
+                { color: "bg-emerald-500", key: "statusMastered" },
+              ].map(({ color, key }) => (
+                <span key={key} className="flex items-center gap-1.5">
                   <span className={`w-2.5 h-2.5 rounded-full ${color}`} />
-                  {label}
+                  {t(key)}
                 </span>
               ))}
             </div>
@@ -308,13 +310,13 @@ export default function VocabularyPage() {
                 onClick={() => setShowAddWord(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 text-white text-xs font-semibold rounded-lg hover:bg-brand-700 transition-colors"
               >
-                <Plus size={13} /> Add word
+                <Plus size={13} /> {t("addWord")}
               </button>
               <button
                 onClick={exportPDF}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-600 text-xs font-semibold rounded-lg hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
               >
-                <Download size={13} /> Export PDF
+                <Download size={13} /> {t("exportPdf")}
               </button>
             </div>
           </div>
@@ -323,7 +325,7 @@ export default function VocabularyPage() {
           {showAddWord && (
             <div className="mb-5 p-4 bg-brand-50 border border-brand-200 rounded-xl space-y-3 dark:bg-brand-900/20 dark:border-brand-800">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-brand-800 dark:text-brand-300">Add a word</p>
+                <p className="text-sm font-semibold text-brand-800 dark:text-brand-300">{t("addAWord")}</p>
                 <button onClick={() => { setShowAddWord(false); setAddResult(null); setAddInput(""); setAddError(""); }}
                   className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300">
                   <X size={16} />
@@ -335,7 +337,7 @@ export default function VocabularyPage() {
                   value={addInput}
                   onChange={(e) => setAddInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && !addAnalyzing && handleAnalyzeWord()}
-                  placeholder="Type a German word or phrase…"
+                  placeholder={t("addPlaceholder")}
                   className="flex-1 px-3 py-2 border border-brand-200 rounded-lg text-sm focus:outline-none focus:border-brand-400 bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100 dark:placeholder-slate-500"
                   autoFocus
                 />
@@ -345,7 +347,7 @@ export default function VocabularyPage() {
                   className="px-4 py-2 bg-brand-600 text-white text-sm font-semibold rounded-lg hover:bg-brand-700 disabled:opacity-50 flex items-center gap-1.5"
                 >
                   {addAnalyzing ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                  Analyze
+                  {t("analyze")}
                 </button>
               </div>
               {addError && <p className="text-xs text-red-500">{addError}</p>}
@@ -361,10 +363,10 @@ export default function VocabularyPage() {
                   </div>
                   <div className="space-y-1">
                     {langs.map((lang) => {
-                      const t = addResult.translations?.[lang.code] || addResult[lang.code === "en" ? "english" : "persian"] || "";
-                      return t ? (
+                      const tr = addResult.translations?.[lang.code] || addResult[lang.code === "en" ? "english" : "persian"] || "";
+                      return tr ? (
                         <p key={lang.code} className="text-sm text-slate-600 dark:text-slate-300" dir={lang.rtl ? "rtl" : "ltr"}>
-                          <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase">{lang.code}</span> {t}
+                          <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase">{lang.code}</span> {tr}
                         </p>
                       ) : null;
                     })}
@@ -377,33 +379,33 @@ export default function VocabularyPage() {
                       onClick={handleSaveAddedWord}
                       className="px-4 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-700"
                     >
-                      Save to vocabulary
+                      {t("saveToVocabulary")}
                     </button>
                     <button
                       onClick={() => { setAddResult(null); setAddInput(""); }}
                       className="px-3 py-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                     >
-                      Discard
+                      {t("discard")}
                     </button>
                   </div>
                 </div>
               )}
-              {addSaved && <p className="text-xs text-emerald-600 font-medium">Saved!</p>}
+              {addSaved && <p className="text-xs text-emerald-600 font-medium">{t("savedBang")}</p>}
             </div>
           )}
 
           {/* Search */}
           <div className="relative mb-3">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <Search size={15} className="absolute start-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <input
               type="text"
-              placeholder="Search words, translations, examples…"
+              placeholder={t("searchPlaceholder")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-400"
+              className="w-full ps-9 pe-4 py-2 text-sm border border-slate-200 rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-400"
             />
             {searchQuery && (
-              <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+              <button onClick={() => setSearchQuery("")} className="absolute end-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
                 <X size={14} />
               </button>
             )}
@@ -416,25 +418,25 @@ export default function VocabularyPage() {
               onChange={(e) => setFilterType(e.target.value)}
               className="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200"
             >
-              <option value="all">All types</option>
-              <option value="noun">Nouns</option>
-              <option value="verb">Verbs</option>
-              <option value="adjective">Adjectives</option>
-              <option value="adverb">Adverbs</option>
-              <option value="phrase">Phrases</option>
+              <option value="all">{t("allTypes")}</option>
+              <option value="noun">{t("nouns")}</option>
+              <option value="verb">{t("verbs")}</option>
+              <option value="adjective">{t("adjectives")}</option>
+              <option value="adverb">{t("adverbs")}</option>
+              <option value="phrase">{t("phrases")}</option>
             </select>
             <select
               value={filterLevel}
               onChange={(e) => setFilterLevel(e.target.value)}
               className="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200"
             >
-              <option value="all">All levels</option>
+              <option value="all">{t("allLevels")}</option>
               {["A1","A2","B1","B2","C1","C2"].map((l) => (
                 <option key={l} value={l}>{l}</option>
               ))}
             </select>
-            <span className="text-sm text-slate-400 dark:text-slate-500 self-center ml-auto">
-              {filteredWords.length} words
+            <span className="text-sm text-slate-400 dark:text-slate-500 self-center ms-auto">
+              {t("wordCount", { count: filteredWords.length })}
             </span>
           </div>
 
@@ -453,7 +455,7 @@ export default function VocabularyPage() {
                     className="flex items-center px-4 py-3 gap-3 cursor-pointer select-none"
                     onClick={() => hasExamples && setExpandedWordId(expanded ? null : word.id)}
                   >
-                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${st.color}`} title={st.label} />
+                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${st.color}`} title={t(st.key)} />
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -472,11 +474,11 @@ export default function VocabularyPage() {
                         </span>
                       )}
                       {langs.map((lang) => {
-                        const t = getTranslation(word, lang.code);
-                        return t ? (
+                        const tr = getTranslation(word, lang.code);
+                        return tr ? (
                           <span key={lang.code}>
                             <span className="text-slate-300 dark:text-slate-600">·</span>
-                            <span className="text-slate-600 dark:text-slate-300 text-sm ml-1" dir={lang.rtl ? "rtl" : "ltr"}>{t}</span>
+                            <span className="text-slate-600 dark:text-slate-300 text-sm ms-1" dir={lang.rtl ? "rtl" : "ltr"}>{tr}</span>
                           </span>
                         ) : null;
                       })}
@@ -485,7 +487,7 @@ export default function VocabularyPage() {
 
                   <div className="flex items-center gap-2 shrink-0">
                     <LevelBadge level={word.cefr_level} />
-                    <span title={`Reviewed ${word.seen_count || 0} times`} className="text-xs text-slate-400 dark:text-slate-500 w-10 text-right">
+                    <span title={t("reviewedTimes", { count: word.seen_count || 0 })} className="text-xs text-slate-400 dark:text-slate-500 w-10 text-end">
                       ×{word.seen_count || 0}
                     </span>
                     <div className="flex gap-0.5">
@@ -497,14 +499,14 @@ export default function VocabularyPage() {
                     <button
                       onClick={(e) => { e.stopPropagation(); speakGerman(word.german); }}
                       className="p-1.5 rounded-lg text-slate-300 dark:text-slate-600 hover:text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-colors"
-                      title="Listen"
+                      title={t("listen")}
                     >
                       <Volume2 size={14} />
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDelete(word.id); }}
                       className="p-1.5 rounded-lg text-slate-300 dark:text-slate-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                      title="Delete word"
+                      title={t("deleteWord")}
                     >
                       <Trash2 size={14} />
                     </button>
@@ -520,14 +522,14 @@ export default function VocabularyPage() {
                       {word.example_de && (
                         <p className="text-sm text-slate-700 dark:text-slate-200 flex gap-2 items-start">
                           <span className="text-base leading-snug">🇩🇪</span>
-                          <span className="italic">{word.example_de}</span>
+                          <span className="italic" dir="ltr" lang="de">{word.example_de}</span>
                         </p>
                       )}
                       {word.example_en && (
-                        <p className="text-xs text-slate-500 dark:text-slate-400 pl-6">{word.example_en}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 ps-6" dir="ltr">{word.example_en}</p>
                       )}
                       {word.example_fa && (
-                        <p className="text-xs text-slate-500 dark:text-slate-400 pl-6 text-right" dir="rtl">{word.example_fa}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 ps-6" dir="rtl">{word.example_fa}</p>
                       )}
                     </div>
                   )}
@@ -536,9 +538,9 @@ export default function VocabularyPage() {
             })}
             {filteredWords.length === 0 && (
               <div className="text-center py-12 space-y-2">
-                <p className="text-slate-400 dark:text-slate-500">No words found.</p>
+                <p className="text-slate-400 dark:text-slate-500">{t("noWordsFound")}</p>
                 <button onClick={() => setMode("quiz")} className="text-sm text-brand-600 hover:underline">
-                  Try the Quiz instead →
+                  {t("tryQuizInstead")}
                 </button>
               </div>
             )}

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Vazirmatn:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -17,7 +17,9 @@
 body {
   color: rgb(var(--foreground-rgb));
   background: rgb(var(--background-start-rgb));
-  font-family: 'Inter', sans-serif;
+  /* Vazirmatn fallback covers Arabic-script glyphs Inter lacks (per-character
+     fallback, so mixed Latin/Persian/Arabic text renders correctly either way) */
+  font-family: 'Inter', 'Vazirmatn', 'Noto Sans Devanagari', sans-serif;
 }
 
 /* Persian / RTL text */

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useImperativeHandle, forwardRef, useRef, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import {
   batchAnalyzeWords, saveWord, readerChat, readPageContext, getPageContext, transcribeAudio, ttsSpeak,
 } from "@/src/lib/api";
@@ -68,14 +69,15 @@ function parseBold(text: string): React.ReactNode[] {
 }
 
 function ExpandableBlock({ body }: { body: string }) {
+  const t = useTranslations("textPanel");
   const [open, setOpen] = useState(false);
   return (
     <div className="border border-brand-200 dark:border-brand-800/60 rounded-xl overflow-hidden mt-1.5">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-3 py-2 bg-brand-50 dark:bg-brand-900/20 text-xs font-semibold text-brand-700 dark:text-brand-300 hover:bg-brand-100 dark:hover:bg-brand-900/40 transition-colors text-left gap-2"
+        className="w-full flex items-center justify-between px-3 py-2 bg-brand-50 dark:bg-brand-900/20 text-xs font-semibold text-brand-700 dark:text-brand-300 hover:bg-brand-100 dark:hover:bg-brand-900/40 transition-colors text-start gap-2"
       >
-        <span>📖 {open ? "Hide explanation" : "Full explanation"}</span>
+        <span>📖 {open ? t("hideExplanation") : t("fullExplanation")}</span>
         <ChevronDown size={12} className={`shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
@@ -110,7 +112,7 @@ function renderLines(text: string): React.ReactNode {
       const content = numMatch[2].trim();
       const rtl = isRtl(content);
       out.push(
-        <div key={key++} dir={rtl ? "rtl" : undefined} className="flex gap-2 items-start mt-0.5">
+        <div key={key++} dir={rtl ? "rtl" : "ltr"} className="flex gap-2 items-start mt-0.5">
           <span className="shrink-0 w-[18px] h-[18px] rounded-full bg-brand-100 dark:bg-brand-900/40 text-brand-600 dark:text-brand-400 text-[10px] font-bold flex items-center justify-center mt-0.5">
             {num}
           </span>
@@ -128,7 +130,7 @@ function renderLines(text: string): React.ReactNode {
       out.push(
         <div
           key={key++}
-          dir={rtl ? "rtl" : undefined}
+          dir={rtl ? "rtl" : "ltr"}
           style={nested ? { [rtl ? "paddingRight" : "paddingLeft"]: "1rem" } : undefined}
           className="flex gap-1.5 items-start"
         >
@@ -143,7 +145,7 @@ function renderLines(text: string): React.ReactNode {
 
     const rtl = isRtl(line.trim());
     out.push(
-      <p key={key++} dir={rtl ? "rtl" : undefined} className="text-slate-800 dark:text-slate-200 leading-relaxed">
+      <p key={key++} dir={rtl ? "rtl" : "ltr"} className="text-slate-800 dark:text-slate-200 leading-relaxed">
         {parseBold(line.trim())}
       </p>
     );
@@ -202,21 +204,14 @@ interface Props {
   pageNum: number;
 }
 
-const QUICK_PROMPTS_GENERAL = [
-  "What are the German modal verbs and how do I use them?",
-  "Explain the difference between 'seit' and 'vor'",
-  "When do I use Akkusativ vs Dativ?",
-];
-const QUICK_PROMPTS_PAGE = [
-  "Summarize this page briefly",
-  "What are the key vocabulary words here?",
-  "Explain the main grammar structures used",
-];
+const QUICK_PROMPT_KEYS_GENERAL = ["quickGeneral1", "quickGeneral2", "quickGeneral3"] as const;
+const QUICK_PROMPT_KEYS_PAGE = ["quickPage1", "quickPage2", "quickPage3"] as const;
 
 export const TextPanel = forwardRef<TextPanelHandle, Props>(function TextPanel(
   { bookId, pageNum },
   ref
 ) {
+  const t = useTranslations("textPanel");
   const { userLevel, translationLanguages } = useAppStore();
 
   // ── Tab ──────────────────────────────────────────────────────────────────
@@ -264,8 +259,8 @@ export const TextPanel = forwardRef<TextPanelHandle, Props>(function TextPanel(
       const raw = e?.message || "";
       setAnalyzeError(
         raw.includes("429") || raw.includes("RESOURCE_EXHAUSTED")
-          ? "Gemini quota exceeded — wait a minute and try again"
-          : `Error: ${raw.slice(0, 120)}`
+          ? t("errQuota")
+          : t("errGeneric", { msg: raw.slice(0, 120) })
       );
     } finally {
       setAnalyzing(false);
@@ -428,8 +423,8 @@ export const TextPanel = forwardRef<TextPanelHandle, Props>(function TextPanel(
       const raw = e?.message || "";
       setChatError(
         raw.includes("key not set") || raw.includes("API key")
-          ? "Gemini API key missing — check Settings"
-          : `Failed to read page: ${raw.slice(0, 100)}`
+          ? t("errApiKey")
+          : t("errReadPage", { msg: raw.slice(0, 100) })
       );
     } finally {
       setContextLoading(false);
@@ -492,7 +487,7 @@ export const TextPanel = forwardRef<TextPanelHandle, Props>(function TextPanel(
           if (text) setChatInput(prev => prev ? `${prev} ${text}` : text);
         } catch (e: any) {
           const raw = e?.message || "";
-          setChatError(raw ? `Transcription: ${raw.slice(0, 120)}` : "Voice transcription failed — try typing instead");
+          setChatError(raw ? t("errTranscription", { msg: raw.slice(0, 120) }) : t("errTranscriptionFailed"));
         } finally {
           setTranscribing(false);
         }
@@ -501,7 +496,7 @@ export const TextPanel = forwardRef<TextPanelHandle, Props>(function TextPanel(
       mr.start();
       setRecording(true);
     } catch {
-      setChatError("Microphone access denied");
+      setChatError(t("errMicDenied"));
     }
   };
 
@@ -536,10 +531,10 @@ export const TextPanel = forwardRef<TextPanelHandle, Props>(function TextPanel(
       const raw = e?.message || "";
       setChatError(
         raw.includes("429") || raw.includes("RESOURCE_EXHAUSTED")
-          ? "Quota exceeded — wait a minute and try again"
+          ? t("errQuotaShort")
           : raw.includes("key not set") || raw.includes("API key")
-          ? "Gemini API key missing — check Settings"
-          : `Error: ${raw.slice(0, 100)}`
+          ? t("errApiKey")
+          : t("errGeneric", { msg: raw.slice(0, 100) })
       );
     } finally {
       setChatLoading(false);
@@ -580,11 +575,11 @@ export const TextPanel = forwardRef<TextPanelHandle, Props>(function TextPanel(
     window.getSelection()?.removeAllRanges();
   };
 
-  const quickPrompts = contextPage === pageNum ? QUICK_PROMPTS_PAGE : QUICK_PROMPTS_GENERAL;
+  const quickPrompts = (contextPage === pageNum ? QUICK_PROMPT_KEYS_PAGE : QUICK_PROMPT_KEYS_GENERAL).map((k) => t(k));
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-full border-l border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-700">
+    <div className="flex flex-col h-full border-s border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-700">
 
       {/* Tab bar */}
       <div className="flex shrink-0 border-b border-slate-200 dark:border-slate-700">
@@ -596,7 +591,7 @@ export const TextPanel = forwardRef<TextPanelHandle, Props>(function TextPanel(
               : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
           }`}
         >
-          <BookOpen size={12} /> Words
+          <BookOpen size={12} /> {t("words")}
         </button>
         <button
           onClick={() => setTab("chat")}
@@ -606,7 +601,7 @@ export const TextPanel = forwardRef<TextPanelHandle, Props>(function TextPanel(
               : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
           }`}
         >
-          <MessageSquare size={12} /> Chat
+          <MessageSquare size={12} /> {t("chat")}
         </button>
       </div>
 
@@ -615,14 +610,14 @@ export const TextPanel = forwardRef<TextPanelHandle, Props>(function TextPanel(
         <div className="flex flex-col flex-1 min-h-0">
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 shrink-0">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-              Word Analysis
+              {t("wordAnalysis")}
             </span>
             {(results.length > 0 || selections.length > 0) && (
               <button
                 onClick={handleClearAll}
                 className="text-xs text-slate-400 hover:text-red-500 transition-colors"
               >
-                Clear all
+                {t("clearAll")}
               </button>
             )}
           </div>
@@ -636,10 +631,10 @@ export const TextPanel = forwardRef<TextPanelHandle, Props>(function TextPanel(
               </div>
               <div className="space-y-1.5">
                 <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
-                  Highlight text on the left
+                  {t("highlightText")}
                 </p>
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  Or type a word below and press Enter.
+                  {t("orTypeWord")}
                 </p>
               </div>
             </div>
@@ -649,7 +644,7 @@ export const TextPanel = forwardRef<TextPanelHandle, Props>(function TextPanel(
                 {selections.map((s, i) => (
                   <span
                     key={i}
-                    className="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs rounded-full font-medium border border-slate-300 dark:border-slate-600 shadow-sm"
+                    className="inline-flex items-center gap-1 ps-2.5 pe-1 py-0.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs rounded-full font-medium border border-slate-300 dark:border-slate-600 shadow-sm"
                   >
                     {s}
                     <button
@@ -670,7 +665,7 @@ export const TextPanel = forwardRef<TextPanelHandle, Props>(function TextPanel(
                 {selections.map((s, i) => (
                   <span
                     key={i}
-                    className="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs rounded-full font-medium border border-slate-300 dark:border-slate-600 shadow-sm"
+                    className="inline-flex items-center gap-1 ps-2.5 pe-1 py-0.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs rounded-full font-medium border border-slate-300 dark:border-slate-600 shadow-sm"
                   >
                     {s}
                     <button
@@ -690,7 +685,7 @@ export const TextPanel = forwardRef<TextPanelHandle, Props>(function TextPanel(
                 value={manualInput}
                 onChange={(e) => setManualInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleManualAdd()}
-                placeholder="Type a word or phrase…"
+                placeholder={t("typeWordPlaceholder")}
                 className="flex-1 min-w-0 px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-400 dark:focus:border-brand-500"
               />
               <button
@@ -708,9 +703,9 @@ export const TextPanel = forwardRef<TextPanelHandle, Props>(function TextPanel(
                 className="w-full py-2.5 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 disabled:opacity-60 flex items-center justify-center gap-2 transition-colors shadow-sm"
               >
                 {analyzing ? (
-                  <><Loader2 size={15} className="animate-spin" />Analyzing…</>
+                  <><Loader2 size={15} className="animate-spin" />{t("analyzing")}</>
                 ) : (
-                  <><Sparkles size={15} />Analyze {selections.length} word{selections.length > 1 ? "s" : ""}</>
+                  <><Sparkles size={15} />{t("analyzeCount", { count: selections.length })}</>
                 )}
               </button>
             )}
@@ -729,7 +724,7 @@ export const TextPanel = forwardRef<TextPanelHandle, Props>(function TextPanel(
             <button
               onClick={handleLoadContext}
               disabled={contextLoading || contextPage === pageNum}
-              title={contextPage === pageNum ? `Page ${pageNum} context loaded` : `Load page ${pageNum} context`}
+              title={contextPage === pageNum ? t("pageContextLoadedTitle", { page: pageNum }) : t("loadPageContextTitle", { page: pageNum })}
               className={`flex-1 min-w-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
                 contextPage === pageNum
                   ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 cursor-default"
@@ -737,13 +732,13 @@ export const TextPanel = forwardRef<TextPanelHandle, Props>(function TextPanel(
               }`}
             >
               {contextLoading ? (
-                <><Loader2 size={11} className="animate-spin shrink-0" /><span className="truncate">Reading page…</span></>
+                <><Loader2 size={11} className="animate-spin shrink-0" /><span className="truncate">{t("readingPage")}</span></>
               ) : contextChecking ? (
                 <Loader2 size={11} className="animate-spin shrink-0 text-slate-300" />
               ) : contextPage === pageNum ? (
-                <><span className="text-emerald-500 shrink-0">●</span><span className="truncate">Page {pageNum} loaded</span></>
+                <><span className="text-emerald-500 shrink-0">●</span><span className="truncate">{t("pageLoaded", { page: pageNum })}</span></>
               ) : (
-                <><ScanLine size={11} className="shrink-0" /><span className="truncate">Load page {pageNum}</span></>
+                <><ScanLine size={11} className="shrink-0" /><span className="truncate">{t("loadPage", { page: pageNum })}</span></>
               )}
             </button>
 
@@ -751,7 +746,7 @@ export const TextPanel = forwardRef<TextPanelHandle, Props>(function TextPanel(
             <div ref={langMenuRef} className="relative shrink-0">
               <button
                 onClick={() => setLangMenuOpen(o => !o)}
-                title="Choose the language the teacher replies in"
+                title={t("chooseReplyLanguage")}
                 className={`flex items-center gap-1 px-2 py-1.5 rounded-lg border text-[11px] font-medium transition-colors ${
                   chatLang
                     ? "bg-brand-50 dark:bg-brand-900/20 border-brand-300 dark:border-brand-700 text-brand-600 dark:text-brand-400"
@@ -759,17 +754,19 @@ export const TextPanel = forwardRef<TextPanelHandle, Props>(function TextPanel(
                 }`}
               >
                 <Languages size={11} />
-                <span>{chatLang ? chatLang.code.toUpperCase() : "Auto"}</span>
+                <span>{chatLang ? chatLang.code.toUpperCase() : t("auto")}</span>
               </button>
               {langMenuOpen && (() => {
                 const opts = [
-                  { code: "auto", name: "Auto-detect" },
-                  { code: "en", name: "English" },
-                  { code: "de", name: "German" },
-                  ...translationLanguages.filter(l => l.code !== "en" && l.code !== "de"),
+                  { code: "auto", name: "Auto-detect", label: t("autoDetect") },
+                  { code: "en", name: "English", label: t("english") },
+                  { code: "de", name: "German", label: t("german") },
+                  ...translationLanguages
+                    .filter(l => l.code !== "en" && l.code !== "de")
+                    .map(l => ({ code: l.code, name: l.name, label: l.name })),
                 ];
                 return (
-                  <div className="absolute top-full mt-1 right-0 z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg py-1 min-w-[130px]">
+                  <div className="absolute top-full mt-1 end-0 z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg py-1 min-w-[130px]">
                     {opts.map(l => (
                       <button
                         key={l.code}
@@ -777,13 +774,13 @@ export const TextPanel = forwardRef<TextPanelHandle, Props>(function TextPanel(
                           setChatLang(l.code === "auto" ? null : { code: l.code, name: l.name });
                           setLangMenuOpen(false);
                         }}
-                        className={`w-full text-left px-3 py-1.5 text-xs transition-colors hover:bg-slate-50 dark:hover:bg-slate-700 ${
+                        className={`w-full text-start px-3 py-1.5 text-xs transition-colors hover:bg-slate-50 dark:hover:bg-slate-700 ${
                           (l.code === "auto" ? !chatLang : chatLang?.code === l.code)
                             ? "text-brand-600 dark:text-brand-400 font-semibold"
                             : "text-slate-700 dark:text-slate-300"
                         }`}
                       >
-                        {l.name}
+                        {l.label}
                       </button>
                     ))}
                   </div>
@@ -794,9 +791,7 @@ export const TextPanel = forwardRef<TextPanelHandle, Props>(function TextPanel(
             {/* Auto-play toggle */}
             <button
               onClick={() => setAutoPlay(a => !a)}
-              title={autoPlay
-                ? "Auto-play is ON — every reply is read aloud automatically. This uses a Gemini TTS call per message (extra API cost). Click to turn off."
-                : "Auto-play is OFF — click to enable. Note: reads every reply aloud automatically, which uses extra Gemini TTS credits."}
+              title={autoPlay ? t("autoPlayOnTitle") : t("autoPlayOffTitle")}
               className={`shrink-0 flex items-center gap-1 px-2 py-1.5 rounded-lg border text-[11px] font-medium transition-colors ${
                 autoPlay
                   ? "bg-brand-50 dark:bg-brand-900/20 border-brand-300 dark:border-brand-700 text-brand-600 dark:text-brand-400"
@@ -804,14 +799,14 @@ export const TextPanel = forwardRef<TextPanelHandle, Props>(function TextPanel(
               }`}
             >
               <Volume2 size={11} />
-              <span>{autoPlay ? "Auto: ON" : "Auto"}</span>
+              <span>{autoPlay ? t("autoOn") : t("auto")}</span>
             </button>
 
             {/* Clear chat */}
             {chatMessages.filter(m => m.role !== "system").length > 0 && (
               <button
                 onClick={handleClearChat}
-                title="Clear chat"
+                title={t("clearChat")}
                 className="shrink-0 p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-400 hover:text-red-500 hover:border-red-300 dark:hover:border-red-700 transition-colors"
               >
                 <Trash2 size={12} />
@@ -831,7 +826,7 @@ export const TextPanel = forwardRef<TextPanelHandle, Props>(function TextPanel(
                 style={{ left: selectionAnchor.x, top: selectionAnchor.y }}
                 className="absolute z-20 -translate-x-1/2 -translate-y-full flex items-center gap-1 px-2 py-1 rounded-lg bg-brand-600 text-white text-[11px] font-semibold shadow-lg hover:bg-brand-700 transition-colors whitespace-nowrap"
               >
-                <PlusCircle size={11} /> Add to Words
+                <PlusCircle size={11} /> {t("addToWords")}
               </button>
             )}
 
@@ -843,12 +838,12 @@ export const TextPanel = forwardRef<TextPanelHandle, Props>(function TextPanel(
                 </div>
                 <div className="space-y-1">
                   <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
-                    Your German teacher is ready
+                    {t("teacherReady")}
                   </p>
                   <p className="text-xs text-slate-400 leading-relaxed">
                     {contextPage === pageNum
-                      ? "Page loaded — ask anything about it."
-                      : "Ask any German question, or load the page for page-specific help."}
+                      ? t("pageLoadedHint")
+                      : t("askAnythingHint")}
                   </p>
                 </div>
                 <div className="flex flex-col gap-1.5 w-full">
@@ -856,7 +851,7 @@ export const TextPanel = forwardRef<TextPanelHandle, Props>(function TextPanel(
                     <button
                       key={q}
                       onClick={() => sendChatMessage(q)}
-                      className="w-full text-left px-3 py-2 rounded-lg text-xs bg-slate-50 dark:bg-slate-800 hover:bg-brand-50 dark:hover:bg-brand-900/20 text-slate-600 dark:text-slate-300 hover:text-brand-700 dark:hover:text-brand-300 border border-slate-200 dark:border-slate-700 transition-colors"
+                      className="w-full text-start px-3 py-2 rounded-lg text-xs bg-slate-50 dark:bg-slate-800 hover:bg-brand-50 dark:hover:bg-brand-900/20 text-slate-600 dark:text-slate-300 hover:text-brand-700 dark:hover:text-brand-300 border border-slate-200 dark:border-slate-700 transition-colors"
                     >
                       {q}
                     </button>
@@ -875,7 +870,7 @@ export const TextPanel = forwardRef<TextPanelHandle, Props>(function TextPanel(
                     <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
                     <div className="flex items-center gap-1.5 shrink-0">
                       <span className="text-[10px] text-slate-400 dark:text-slate-500 whitespace-nowrap">
-                        📄 Page {targetPage}
+                        📄 {t("pageDivider", { page: targetPage })}
                       </span>
                       {contextPage !== targetPage && (
                         <button
@@ -883,7 +878,7 @@ export const TextPanel = forwardRef<TextPanelHandle, Props>(function TextPanel(
                           disabled={contextLoading || pageNum !== targetPage}
                           className="text-[10px] px-1.5 py-0.5 rounded border border-brand-300 dark:border-brand-700 text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-colors disabled:opacity-40"
                         >
-                          Load
+                          {t("load")}
                         </button>
                       )}
                     </div>
@@ -903,7 +898,7 @@ export const TextPanel = forwardRef<TextPanelHandle, Props>(function TextPanel(
                   {!isUser && (
                     <button
                       onClick={() => handleSpeak(msg.content)}
-                      title={isSpeaking ? "Stop" : isLoadingTts ? "Generating…" : "Listen"}
+                      title={isSpeaking ? t("stop") : isLoadingTts ? t("generating") : t("listen")}
                       className={`shrink-0 mt-1 p-1 rounded-lg transition-colors self-start ${
                         isSpeaking || isLoadingTts
                           ? "text-brand-500 bg-brand-50 dark:bg-brand-900/20"
@@ -920,8 +915,8 @@ export const TextPanel = forwardRef<TextPanelHandle, Props>(function TextPanel(
                   <div
                     className={`max-w-[85%] px-3 py-2 rounded-2xl text-xs leading-relaxed ${
                       isUser
-                        ? "bg-brand-600 text-white rounded-br-sm whitespace-pre-wrap"
-                        : "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-bl-sm"
+                        ? "bg-brand-600 text-white rounded-ee-sm whitespace-pre-wrap"
+                        : "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-es-sm"
                     }`}
                     dir={rtl ? "rtl" : "ltr"}
                   >
@@ -934,7 +929,7 @@ export const TextPanel = forwardRef<TextPanelHandle, Props>(function TextPanel(
             {chatLoading && (
               <div className="flex justify-start gap-1.5">
                 <div className="w-6" /> {/* spacer aligning with speaker button */}
-                <div className="bg-slate-100 dark:bg-slate-800 px-3 py-2 rounded-2xl rounded-bl-sm">
+                <div className="bg-slate-100 dark:bg-slate-800 px-3 py-2 rounded-2xl rounded-es-sm">
                   <Loader2 size={13} className="animate-spin text-slate-400" />
                 </div>
               </div>
@@ -957,9 +952,9 @@ export const TextPanel = forwardRef<TextPanelHandle, Props>(function TextPanel(
                   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
                 }}
                 placeholder={
-                  transcribing ? "Transcribing…"
-                  : recording ? "Recording… tap mic to stop"
-                  : "Ask your German teacher…"
+                  transcribing ? t("transcribing")
+                  : recording ? t("recordingTapToStop")
+                  : t("askTeacherPlaceholder")
                 }
                 disabled={chatLoading || transcribing}
                 className="flex-1 min-w-0 px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-400 dark:focus:border-brand-500 disabled:opacity-50"
@@ -968,7 +963,7 @@ export const TextPanel = forwardRef<TextPanelHandle, Props>(function TextPanel(
                 <button
                   onClick={toggleRecording}
                   disabled={chatLoading || transcribing}
-                  title={recording ? "Stop recording" : "Voice input (Gemini)"}
+                  title={recording ? t("stopRecording") : t("voiceInput")}
                   className={`shrink-0 p-1.5 rounded-lg border transition-colors disabled:opacity-40 ${
                     recording
                       ? "bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700 text-red-500 animate-pulse"

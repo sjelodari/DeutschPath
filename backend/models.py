@@ -152,7 +152,9 @@ class UserProfile(Base):
 
     user_id          = Column(String, primary_key=True)
     current_level    = Column(String, default="A1")
-    ui_language      = Column(String, default="fa")
+    # NULL = never explicitly chosen; the frontend then derives a default
+    # from the user's primary explanation language (LocaleSync.tsx)
+    ui_language      = Column(String, default=None)
     daily_goal_words = Column(Integer, default=10)
     streak_days      = Column(Integer, default=0)
     last_active      = Column(String, default=_today)
